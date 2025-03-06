@@ -3,6 +3,7 @@ import os
 from lyrics_to_slides import LyricsSlideshow
 from song_parser import SongParser
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE
 
 class TestLyricsSlideshow(unittest.TestCase):
     def setUp(self):
@@ -144,27 +145,54 @@ We are saved in His life!"""
         for shape in second_slide.shapes:
             if hasattr(shape, "text_frame"):
                 text = shape.text_frame.text.strip()
-                if text == "Song 1":
+                if "SONG 1" in text:
                     song_title = text
-                elif "Verse" in text:
+                elif "STANZA" in text:
                     verse_header = text
-        self.assertEqual(song_title, "Song 1")
-        self.assertEqual(verse_header, "Verse 1")
+        self.assertEqual(song_title, "SONG 1")
+        self.assertEqual(verse_header, "STANZA 1")
 
-    def test_background_color(self):
-        """Test that slides have the correct background color."""
+    def test_slide_styling(self):
+        """Test that slides have the correct styling."""
         songs = self.parser.parse_songs(self.test_songs)
         output_file = self.slideshow.create_presentation(songs, self.test_output)
         
         prs = Presentation(output_file)
         
-        # Check the first content slide (second slide)
+        # Check content slide (second slide)
         content_slide = prs.slides[1]
+        
+        # Check main background color
         background = content_slide.background
         fill = background.fill
+        self.assertTrue(fill.type)  # Should be solid fill
+        self.assertEqual(fill.fore_color.rgb, self.slideshow.BACKGROUND_COLOR)
         
-        # Check if the background is solid fill
-        self.assertTrue(fill.type)
+        # Check header background shape
+        header_shape = None
+        for shape in content_slide.shapes:
+            if shape.shape_type == MSO_SHAPE.RECTANGLE:  # Rectangle shape for header background
+                header_shape = shape
+                break
+        self.assertIsNotNone(header_shape, "Header background shape not found")
+        self.assertEqual(header_shape.fill.fore_color.rgb, self.slideshow.HEADER_BACKGROUND_COLOR)
+        
+        # Check text formatting
+        for shape in content_slide.shapes:
+            if hasattr(shape, "text_frame"):
+                text = shape.text_frame.text.strip()
+                if text:  # Only check non-empty text boxes
+                    if "SONG" in text or "STANZA" in text:
+                        # Header text should be uppercase and have header color
+                        self.assertTrue(text.isupper())
+                        font = shape.text_frame.paragraphs[0].font
+                        if font.color.type is not None:  # Only check if color is set
+                            self.assertEqual(font.color.rgb, self.slideshow.HEADER_TEXT_COLOR)
+                    else:
+                        # Content text should have main text color
+                        font = shape.text_frame.paragraphs[0].font
+                        if font.color.type is not None:  # Only check if color is set
+                            self.assertEqual(font.color.rgb, self.slideshow.TEXT_COLOR)
 
 if __name__ == '__main__':
     unittest.main() 
