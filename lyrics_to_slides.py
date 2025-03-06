@@ -29,11 +29,11 @@ class LyricsSlideshow:
         # Define positions
         self.LEFT_MARGIN = Inches(1)
         self.RIGHT_MARGIN = Inches(9)
-        self.TOP_MARGIN = Inches(0.2)  # Reduced from 0.5
+        self.TOP_MARGIN = Inches(0.05)  # Reduced from 0.2 to move text closer to top
         self.WIDTH = Inches(8)
-        self.HEADER_HEIGHT = Inches(0.4)  # Reduced from 0.75
-        self.LYRICS_TOP = Inches(0.8)  # Reduced from 1.5
-        self.LYRICS_HEIGHT = Inches(5)  # Increased from 4 since we have more space
+        self.HEADER_HEIGHT = Inches(0.4)  # Keep this the same
+        self.LYRICS_TOP = Inches(0.8)  # Keep this the same
+        self.LYRICS_HEIGHT = Inches(5)  # Keep this the same
 
     def _add_header_background(self, slide):
         """Add a darker background for the header area."""
@@ -42,7 +42,7 @@ class LyricsSlideshow:
             0,  # Left
             0,  # Top
             Inches(10),  # Width (full slide width)
-            Inches(0.5)  # Height - slightly taller than text for padding
+            self.HEADER_HEIGHT + Inches(0.1)  # Height - slightly taller than text for padding
         )
         fill = header_shape.fill
         fill.solid()
@@ -137,7 +137,7 @@ class LyricsSlideshow:
                     self.LEFT_MARGIN,
                     self.TOP_MARGIN,
                     Inches(6),
-                    self.HEADER_HEIGHT,
+                    self.HEADER_HEIGHT - Inches(0.05),  # Slightly reduce height to prevent overflow
                     self.HEADER_SIZE,
                     alignment=PP_ALIGN.LEFT,
                     is_header=True
@@ -151,7 +151,7 @@ class LyricsSlideshow:
                     Inches(7),
                     self.TOP_MARGIN,
                     Inches(2),
-                    self.HEADER_HEIGHT,
+                    self.HEADER_HEIGHT - Inches(0.05),  # Slightly reduce height to prevent overflow
                     self.HEADER_SIZE,
                     alignment=PP_ALIGN.RIGHT,
                     is_header=True
