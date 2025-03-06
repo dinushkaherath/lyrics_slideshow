@@ -10,7 +10,7 @@ from song_parser import SongParser, Song
 class LyricsSlideshow:
     def __init__(self):
         self.prs = Presentation()
-        self.blank_layout = self.prs.slide_layouts[5]  # Title Only layout
+        self.blank_layout = self.prs.slide_layouts[6]  # Blank layout instead of Title Only layout
         
         # Define styles
         self.TITLE_FONT = "Helvetica Neue"
