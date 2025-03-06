@@ -144,7 +144,7 @@ class LyricsSlideshow:
                 )
                 
                 # Add section number (top right)
-                section_title = "CHORUS" if section['type'] == 'chorus' else f"STANZA {section['number']}"
+                section_title = f"CHORUS {section['number']}" if section['type'] == 'chorus' else f"STANZA {section['number']}"
                 self._add_text_box(
                     slide,
                     section_title,
