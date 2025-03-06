@@ -88,6 +88,28 @@ God in us flowing, in our hearts growing,
 We are saved in His life!
 We are saved in His life!"""
 
+        # Additional test songs with different formats
+        self.test_songs_with_labels = """Song 4
+Oh what a mystery! Christ in you, Christ in me!
+Oh what a victory! Christ in you, Christ in me!
+
+Chorus 1:
+Christ is in you,
+Though the body's dead because of sin.
+The spirit's life because of righteousness.
+
+Chorus 2:
+God willed to make known
+The riches of the glory of this mystery, 
+Which is Christ in you, the hope of glory."""
+
+        self.test_single_verse_song = """Song 5
+O that Christ may make His home my heart!
+Spread Himself in every part!
+Saturate and life impart!
+That with all saints I may apprehend
+All the vast dimensions of my loving Christ."""
+
     def test_song_count(self):
         """Test that the parser correctly identifies three songs."""
         songs = self.parser.parse_songs(self.test_songs)
@@ -170,6 +192,40 @@ We are saved in His life!"""
         first_verse = verses[0]
         expected_content = "Praise the Lord, God sent His Son,\nHallelujah!\nAnd salvation's work was done,\nGlory to God!\nGod Himself became a man,\nSo that we might live in Him."
         self.assertEqual(first_verse['content'], expected_content)
+
+    def test_explicit_chorus_labels(self):
+        """Test that explicitly labeled choruses are correctly parsed."""
+        songs = self.parser.parse_songs(self.test_songs_with_labels)
+        song = songs[0]
+        
+        # Should have 3 sections: 1 verse and 2 choruses
+        self.assertEqual(len(song['sections']), 3)
+        
+        # Check that we have 2 choruses
+        choruses = [section for section in song['sections'] if section['type'] == 'chorus']
+        self.assertEqual(len(choruses), 2)
+        
+        # Check chorus content is cleaned
+        first_chorus = choruses[0]
+        expected_content = "Christ is in you,\nThough the body's dead because of sin.\nThe spirit's life because of righteousness."
+        self.assertEqual(first_chorus['content'], expected_content)
+
+    def test_single_verse_song(self):
+        """Test that songs with a single unnumbered verse are correctly parsed."""
+        songs = self.parser.parse_songs(self.test_single_verse_song)
+        song = songs[0]
+        
+        # Should have 1 section: 1 verse
+        self.assertEqual(len(song['sections']), 1)
+        
+        # Check that it's a verse
+        section = song['sections'][0]
+        self.assertEqual(section['type'], 'verse')
+        self.assertEqual(section['number'], 1)  # Should be numbered as verse 1
+        
+        # Check content
+        expected_content = "O that Christ may make His home my heart!\nSpread Himself in every part!\nSaturate and life impart!\nThat with all saints I may apprehend\nAll the vast dimensions of my loving Christ."
+        self.assertEqual(section['content'], expected_content)
 
 if __name__ == '__main__':
     unittest.main() 
