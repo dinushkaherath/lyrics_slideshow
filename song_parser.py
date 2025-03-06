@@ -32,12 +32,21 @@ class SongParser:
         
         return songs
     
+    def clean_section_content(self, content: str) -> str:
+        """Clean section content by removing labels and extra whitespace."""
+        # Remove common labels like "Chorus 1:", "Verse 1:", etc.
+        lines = content.split('\n')
+        if lines and any(label in lines[0].lower() for label in ['chorus', 'verse']):
+            lines = lines[1:]
+        return '\n'.join(line.strip() for line in lines if line.strip())
+
     def parse_lyrics(self, lyrics: str) -> List[Dict[str, str]]:
         """Parse lyrics into a list of stanzas and identify chorus."""
         # Split lyrics into stanzas
         stanzas = [s for s in lyrics.split('\n\n') if s.strip()]
         parsed_lyrics = []
         chorus_count = 0
+        verse_count = 0
         
         for stanza in stanzas:
             # Split into lines and remove empty lines
@@ -45,24 +54,36 @@ class SongParser:
             if not lines:
                 continue
             
-            # Check if stanza is indented (chorus)
-            # A stanza is a chorus if the first non-empty line starts with spaces
+            # Get the first non-empty line for analysis
             first_non_empty = next(line for line in stanza.split('\n') if line.strip())
-            is_chorus = first_non_empty.startswith('        ')  # 8 spaces
             
-            # Process the stanza
-            first_line = lines[0].strip()
+            # Check various chorus indicators
+            is_chorus = (
+                first_non_empty.startswith('        ') or  # 8 spaces indentation
+                first_non_empty.lower().startswith('chorus') or
+                'chorus' in first_non_empty.lower()
+            )
+            
+            # Clean up the content
+            content = self.clean_section_content(stanza)
+            lines = content.split('\n')
+            
             number = None
-            
-            # Only look for verse numbers in non-chorus sections
-            if not is_chorus and first_line.startswith(('1.', '2.', '3.', '4.', '5.')):
-                number = int(first_line[0])
-                lines[0] = lines[0][2:].strip()
-            elif is_chorus:
+            # Handle verse numbering
+            if not is_chorus:
+                verse_count += 1
+                if lines and any(lines[0].startswith(f"{i}.") for i in range(1, 10)):
+                    # Extract number if it exists
+                    number = int(lines[0][0])
+                    lines[0] = lines[0][2:].strip()
+                else:
+                    # For unnumbered verses, use the verse count
+                    number = verse_count
+            else:
                 chorus_count += 1
                 number = chorus_count
             
-            # Strip all lines and join them back together
+            # Join the cleaned lines
             content = '\n'.join(line.strip() for line in lines)
             
             # Create the section

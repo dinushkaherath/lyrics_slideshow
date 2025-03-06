@@ -26,11 +26,11 @@ class LyricsSlideshow:
         self.TEXT_COLOR = RGBColor(255, 255, 255)  # White text
         self.HEADER_TEXT_COLOR = RGBColor(200, 200, 200)  # Slightly dimmed white for headers
         
-        # Define positions
-        self.LEFT_MARGIN = Inches(1)
-        self.RIGHT_MARGIN = Inches(9)
-        self.TOP_MARGIN = Inches(0.05)  # Reduced from 0.2 to move text closer to top
-        self.WIDTH = Inches(8)
+        # Define positions - Maximizing width by reducing margins
+        self.LEFT_MARGIN = Inches(0.3)  # Reduced from 1
+        self.RIGHT_MARGIN = Inches(9.7)  # Increased from 9
+        self.TOP_MARGIN = Inches(0.05)  # Keep this the same for header
+        self.WIDTH = Inches(9.4)  # Increased from 8 (difference between RIGHT_MARGIN and LEFT_MARGIN)
         self.HEADER_HEIGHT = Inches(0.4)  # Keep this the same
         self.LYRICS_TOP = Inches(0.8)  # Keep this the same
         self.LYRICS_HEIGHT = Inches(5)  # Keep this the same
@@ -157,7 +157,7 @@ class LyricsSlideshow:
                     is_header=True
                 )
                 
-                # Add lyrics content
+                # Add lyrics content with maximum width
                 self._add_text_box(
                     slide,
                     section['content'],
