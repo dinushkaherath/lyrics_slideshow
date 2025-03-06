@@ -37,6 +37,7 @@ class SongParser:
         # Split lyrics into stanzas
         stanzas = [s for s in lyrics.split('\n\n') if s.strip()]
         parsed_lyrics = []
+        chorus_count = 0
         
         for stanza in stanzas:
             # Split into lines and remove empty lines
@@ -57,6 +58,9 @@ class SongParser:
             if not is_chorus and first_line.startswith(('1.', '2.', '3.', '4.', '5.')):
                 number = int(first_line[0])
                 lines[0] = lines[0][2:].strip()
+            elif is_chorus:
+                chorus_count += 1
+                number = chorus_count
             
             # Strip all lines and join them back together
             content = '\n'.join(line.strip() for line in lines)
@@ -65,7 +69,7 @@ class SongParser:
             section = {
                 'type': 'chorus' if is_chorus else 'verse',
                 'content': content,
-                'number': number if not is_chorus else None
+                'number': number
             }
             
             parsed_lyrics.append(section)
