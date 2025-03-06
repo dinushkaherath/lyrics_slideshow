@@ -2,6 +2,7 @@ from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
+from pptx.enum.shapes import MSO_SHAPE
 from typing import List, Dict
 import os
 from song_parser import SongParser, Song
@@ -20,20 +21,37 @@ class LyricsSlideshow:
         self.CHORUS_SIZE = Pt(28)  # Reduced from 40
         
         # Define colors
-        self.BACKGROUND_COLOR = RGBColor(242, 242, 242)  # Light Gray 2
-        self.TEXT_COLOR = RGBColor(0, 0, 0)  # Black
+        self.BACKGROUND_COLOR = RGBColor(40, 40, 40)  # Dark gray background
+        self.HEADER_BACKGROUND_COLOR = RGBColor(30, 30, 30)  # Slightly darker for header
+        self.TEXT_COLOR = RGBColor(255, 255, 255)  # White text
+        self.HEADER_TEXT_COLOR = RGBColor(200, 200, 200)  # Slightly dimmed white for headers
         
         # Define positions
         self.LEFT_MARGIN = Inches(1)
         self.RIGHT_MARGIN = Inches(9)
         self.TOP_MARGIN = Inches(0.5)
         self.WIDTH = Inches(8)
-        self.HEADER_HEIGHT = Inches(0.5)  # Reduced from 0.75
-        self.LYRICS_TOP = Inches(1.25)    # Reduced from 1.5
-        self.LYRICS_HEIGHT = Inches(3)    # Reduced from 4
+        self.HEADER_HEIGHT = Inches(0.75)
+        self.LYRICS_TOP = Inches(1.5)
+        self.LYRICS_HEIGHT = Inches(4)
+
+    def _add_header_background(self, slide):
+        """Add a darker background for the header area."""
+        header_shape = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            0,  # Left
+            0,  # Top
+            Inches(10),  # Width (full slide width)
+            Inches(1)    # Height
+        )
+        fill = header_shape.fill
+        fill.solid()
+        fill.fore_color.rgb = self.HEADER_BACKGROUND_COLOR
+        header_shape.line.fill.background()  # No border
+        return header_shape  # Return the shape for testing
 
     def _add_text_box(self, slide, text: str, left: float, top: float, width: float, height: float, 
-                     font_size: int, alignment=PP_ALIGN.CENTER, is_title: bool = False, is_chorus: bool = False):
+                     font_size: int, alignment=PP_ALIGN.CENTER, is_title: bool = False, is_chorus: bool = False, is_header: bool = False):
         """Add a text box to the slide with specified formatting."""
         shape = slide.shapes.add_textbox(left, top, width, height)
         text_frame = shape.text_frame
@@ -45,7 +63,7 @@ class LyricsSlideshow:
         
         # Add first line
         first_paragraph = text_frame.paragraphs[0]
-        first_paragraph.text = lines[0]
+        first_paragraph.text = lines[0].upper() if is_header else lines[0]
         first_paragraph.alignment = alignment
         first_paragraph.line_spacing = 1.0  # Single line spacing
         
@@ -53,14 +71,14 @@ class LyricsSlideshow:
         font = first_paragraph.font
         font.size = font_size
         font.name = self.TITLE_FONT if is_title else self.BODY_FONT
-        font.color.rgb = self.TEXT_COLOR
+        font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
         if is_chorus:
             font.italic = True
             
         # Add remaining lines
         for line in lines[1:]:
             paragraph = text_frame.add_paragraph()
-            paragraph.text = line
+            paragraph.text = line.upper() if is_header else line
             paragraph.alignment = alignment
             paragraph.line_spacing = 1.0  # Single line spacing
             
@@ -68,7 +86,7 @@ class LyricsSlideshow:
             font = paragraph.font
             font.size = font_size
             font.name = self.TITLE_FONT if is_title else self.BODY_FONT
-            font.color.rgb = self.TEXT_COLOR
+            font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
             if is_chorus:
                 font.italic = True
                 
@@ -98,7 +116,7 @@ class LyricsSlideshow:
         )
 
         # Process each song
-        for song in songs:
+        for song_index, song in enumerate(songs, 1):
             # Add slides for each section
             for section in song['sections']:
                 slide = self.prs.slides.add_slide(self.blank_layout)
@@ -109,20 +127,24 @@ class LyricsSlideshow:
                 fill.solid()
                 fill.fore_color.rgb = self.BACKGROUND_COLOR
                 
-                # Add song title (top left)
+                # Add header background
+                self._add_header_background(slide)
+                
+                # Add song number and title (top left)
                 self._add_text_box(
                     slide,
-                    song['title'],
+                    f"SONG {song_index}",
                     self.LEFT_MARGIN,
                     self.TOP_MARGIN,
                     Inches(6),
                     self.HEADER_HEIGHT,
                     self.HEADER_SIZE,
-                    alignment=PP_ALIGN.LEFT
+                    alignment=PP_ALIGN.LEFT,
+                    is_header=True
                 )
                 
                 # Add section number (top right)
-                section_title = "Chorus" if section['type'] == 'chorus' else f"Verse {section['number']}"
+                section_title = "CHORUS" if section['type'] == 'chorus' else f"STANZA {section['number']}"
                 self._add_text_box(
                     slide,
                     section_title,
@@ -131,7 +153,8 @@ class LyricsSlideshow:
                     Inches(2),
                     self.HEADER_HEIGHT,
                     self.HEADER_SIZE,
-                    alignment=PP_ALIGN.RIGHT
+                    alignment=PP_ALIGN.RIGHT,
+                    is_header=True
                 )
                 
                 # Add lyrics content
