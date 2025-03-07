@@ -375,6 +375,38 @@ The Son of God is He."""
         # All instances of each chorus should have the same content
         self.assertEqual(len(set(c['content'] for c in chorus1_instances)), 1)
         self.assertEqual(len(set(c['content'] for c in chorus2_instances)), 1)
+        
+    def test_song_first_lines(self):
+        """Test that the parser correctly maintains a list of first lines of all songs."""
+        # Test with main test songs
+        songs = self.parser.parse_songs(self.test_songs)
+        expected_first_lines = [
+            "Praise the Lord, God sent His Son,",
+            "Have you been to Jesus for the cleansing pow'r?",
+            "In a low dungeon, hope we had none;"
+        ]
+        self.assertEqual(self.parser.song_first_lines, expected_first_lines)
+        
+        # Test with additional songs
+        songs = self.parser.parse_songs(self.test_songs_with_labels)
+        self.assertEqual(self.parser.song_first_lines, 
+                        ["Oh what a mystery! Christ in you, Christ in me!"])
+        
+        # Test with single verse song
+        songs = self.parser.parse_songs(self.test_single_verse_song)
+        self.assertEqual(self.parser.song_first_lines, 
+                        ["O that Christ may make His home my heart!"])
+        
+        # Test with multiple song texts
+        combined_text = self.test_songs + "\n\n" + self.test_songs_with_labels
+        songs = self.parser.parse_songs(combined_text)
+        expected_first_lines = [
+            "Praise the Lord, God sent His Son,",
+            "Have you been to Jesus for the cleansing pow'r?",
+            "In a low dungeon, hope we had none;",
+            "Oh what a mystery! Christ in you, Christ in me!"
+        ]
+        self.assertEqual(self.parser.song_first_lines, expected_first_lines)
 
 if __name__ == '__main__':
     unittest.main() 

@@ -22,6 +22,9 @@ class SongParser:
         Returns:
             List[Song]: List of parsed songs with their sections and expanded sections
         """
+        # Reset first lines list for new parsing
+        self.song_first_lines = []
+
         # Split text into individual songs
         raw_songs = [s.strip() for s in text.split('Song') if s.strip()]
         songs = []
@@ -36,6 +39,27 @@ class SongParser:
             if title.isdigit():  # If title is just a number, make it more descriptive
                 title = f"Song {title}"
             lyrics = lines[1].strip()
+            
+            # Get the first line of actual lyrics
+            lyrics_lines = lyrics.split('\n')
+            first_line = None
+            for line in lyrics_lines:
+                line = line.strip()
+                # Skip empty lines
+                if not line:
+                    continue
+                    
+                # If line starts with verse number, remove it
+                if line[0].isdigit() and line[1] == '.':
+                    line = line[2:].strip()
+                
+                # Skip if line is just a verse number or empty after stripping
+                if line and not line.isdigit():
+                    first_line = line
+                    break
+            
+            if first_line:
+                self.song_first_lines.append(first_line)
             
             # Parse the lyrics into sections
             sections = self.parse_lyrics(lyrics)
