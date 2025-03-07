@@ -16,7 +16,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Create a text file named `lyrics.txt` with your song lyrics. Format requirements:
+1. Create a text file named `songs.txt` with your song lyrics. Format requirements:
    - Number verses with "1.", "2.", etc. at the start
    - Indent chorus lines with spaces or tabs
    - Separate verses and chorus with blank lines
