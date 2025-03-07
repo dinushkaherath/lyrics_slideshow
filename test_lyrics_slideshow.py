@@ -49,10 +49,10 @@ Making sure it all works."""
         # Calculate expected number of slides:
         # 1 (main title) + 
         # For each song:
-        #   number of sections
+        #   number of expanded sections
         expected_slides = 1  # Main title
         for song in songs:
-            expected_slides += len(song['sections'])  # One slide per section
+            expected_slides += len(song['expanded_sections'])  # One slide per expanded section
             
         self.assertEqual(len(prs.slides), expected_slides)
 

@@ -193,8 +193,14 @@ class LyricsSlideshow:
 
         # Process each song
         for song_index, song in enumerate(songs, 1):
+            # Check if the song has any chorus numbered higher than 1
+            has_multiple_choruses = any(
+                section['type'] == 'chorus' and section['number'] > 1 
+                for section in song['sections']
+            )
+
             # Add slides for each expanded section
-            for section in song['expanded_sections']:  # Changed from 'sections' to 'expanded_sections'
+            for section in song['expanded_sections']:
                 slide = self.prs.slides.add_slide(self.blank_layout)
                 
                 # Set background color
@@ -220,7 +226,11 @@ class LyricsSlideshow:
                 )
                 
                 # Add section number (top right)
-                section_title = f"CHORUS {section['number']}" if section['type'] == 'chorus' else f"STANZA {section['number']}"
+                if section['type'] == 'chorus':
+                    section_title = f"CHORUS {section['number']}" if has_multiple_choruses else "CHORUS"
+                else:
+                    section_title = f"STANZA {section['number']}"
+
                 self._add_text_box(
                     slide,
                     section_title,
