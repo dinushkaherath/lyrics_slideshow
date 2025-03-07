@@ -2,6 +2,7 @@ from typing import List, Dict, TypedDict
 
 class Song(TypedDict):
     title: str
+    first_line: str
     sections: List[Dict[str, str]]
     expanded_sections: List[Dict[str, str]]  # Added expanded sections
 
@@ -22,9 +23,6 @@ class SongParser:
         Returns:
             List[Song]: List of parsed songs with their sections and expanded sections
         """
-        # Reset first lines list for new parsing
-        self.song_first_lines = []
-
         # Split text into individual songs
         raw_songs = [s.strip() for s in text.split('Song') if s.strip()]
         songs = []
@@ -42,7 +40,7 @@ class SongParser:
             
             # Get the first line of actual lyrics
             lyrics_lines = lyrics.split('\n')
-            first_line = None
+            first_line = "None"
             for line in lyrics_lines:
                 line = line.strip()
                 # Skip empty lines
@@ -58,9 +56,6 @@ class SongParser:
                     first_line = line
                     break
             
-            if first_line:
-                self.song_first_lines.append(first_line)
-            
             # Parse the lyrics into sections
             sections = self.parse_lyrics(lyrics)
             
@@ -69,6 +64,7 @@ class SongParser:
             
             songs.append({
                 'title': title,
+                'first_line': first_line,
                 'sections': sections,
                 'expanded_sections': expanded_sections
             })
