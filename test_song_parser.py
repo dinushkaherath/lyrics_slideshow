@@ -110,6 +110,84 @@ Saturate and life impart!
 That with all saints I may apprehend
 All the vast dimensions of my loving Christ."""
 
+        # Test song with chorus references
+        self.test_song_with_chorus_refs = """Song 6
+1. The love of Christ is now constraining me
+That I would love and love Him utterly—
+His mighty love has touched me deep within
+To consecrate my life and all to Him.
+
+Chorus 1:
+        This charming one so excelling
+        To His touch I'm now responding
+        To surrender, to surrender to Him. 
+
+2. This tide of love has flowed to me from Him
+Unchanging love that keeps on rushing in.
+Now I'm for Him beyond my own control.
+He is now my love and my only goal.
+
+Chorus 2:
+        His dying love so compelling
+        And this tide has made me willing
+        To love Him, I can't help but love Him.
+
+3. The love of Christ is now constraining me
+To love Him utterly.
+His mighty love has touched me deep within
+To consecrate to Him.
+
+Chorus 1
+
+4. This tide of love has flowed to me from Him
+That keeps on rushing in.
+Now I'm for Him beyond my own control;
+He's now my final goal.
+
+Chorus 2"""
+
+        # Test song with alternating choruses
+        self.test_song_with_alternating_choruses = """Song 7
+1. Christ is God incarnated,
+Born according to God's plan
+To bring divinity, into humanity,
+By mingling with man.
+
+2. Christ is God incarnated,
+He became the Son of Man;
+A man of flesh yet without sin,
+Accomplishing redemption,
+He was a perfect man.
+
+        And He shall be named Jesus,
+        And called Emmanuel,
+        Hallelujah! God with us,
+        In man He came to dwell.
+
+3. Christ is God incarnated,
+How wonderful! How marvelous!
+Incarnated so that He could
+Live inside of you and me,
+He's mingling now with us.
+
+4. Christ is God incarnated,
+He became the first God-man.
+Oh! How glorious!
+Now He lives inside of us,
+Fulfilling God's great plan.
+
+        So He shall be named Jesus,
+        And called Emmanuel,
+        Hallelujah! God with us,
+        In man He came to dwell.
+
+5. Jesus is the Son of God,
+The Son of God is He,
+The Son of God is He,
+The Son of God is He,
+The Son of God is He,
+The Son of God is He."""
+
     def test_song_count(self):
         """Test that the parser correctly identifies three songs."""
         songs = self.parser.parse_songs(self.test_songs)
@@ -226,6 +304,77 @@ All the vast dimensions of my loving Christ."""
         # Check content
         expected_content = "O that Christ may make His home my heart!\nSpread Himself in every part!\nSaturate and life impart!\nThat with all saints I may apprehend\nAll the vast dimensions of my loving Christ."
         self.assertEqual(section['content'], expected_content)
+
+    def test_chorus_references(self):
+        """Test that chorus references are correctly handled and maintain order."""
+        songs = self.parser.parse_songs(self.test_song_with_chorus_refs)
+        song = songs[0]
+        
+        # Should have 8 sections in this order: verse1, chorus1, verse2, chorus2, verse3, chorus1, verse4, chorus2
+        self.assertEqual(len(song['sections']), 8)
+        
+        # Check the sequence of sections
+        expected_sequence = [
+            ('verse', 1),
+            ('chorus', 1),
+            ('verse', 2),
+            ('chorus', 2),
+            ('verse', 3),
+            ('chorus', 1),  # Reference to Chorus 1
+            ('verse', 4),
+            ('chorus', 2),  # Reference to Chorus 2
+        ]
+        
+        for i, (expected_type, expected_number) in enumerate(expected_sequence):
+            section = song['sections'][i]
+            self.assertEqual(section['type'], expected_type)
+            self.assertEqual(section['number'], expected_number)
+        
+        # Verify that referenced choruses have the same content
+        chorus1_instances = [s for s in song['sections'] if s['type'] == 'chorus' and s['number'] == 1]
+        chorus2_instances = [s for s in song['sections'] if s['type'] == 'chorus' and s['number'] == 2]
+        
+        # All instances of Chorus 1 should have the same content
+        self.assertEqual(len(set(c['content'] for c in chorus1_instances)), 1)
+        # All instances of Chorus 2 should have the same content
+        self.assertEqual(len(set(c['content'] for c in chorus2_instances)), 1)
+
+    def test_expanded_sections(self):
+        """Test that expanded sections correctly repeat choruses after verses."""
+        songs = self.parser.parse_songs(self.test_song_with_alternating_choruses)
+        song = songs[0]
+        
+        # Original sections should be: verse1, verse2, chorus1, verse3, verse4, chorus2, verse5
+        self.assertEqual(len(song['sections']), 7)
+        
+        # Expanded sections should be: verse1, verse2, chorus1, verse3, chorus1, verse4, chorus2, verse5, chorus2
+        self.assertEqual(len(song['expanded_sections']), 9)
+        
+        # Check the sequence of expanded sections
+        expected_sequence = [
+            ('verse', 1),
+            ('verse', 2),
+            ('chorus', 1),
+            ('verse', 3),
+            ('chorus', 1),
+            ('verse', 4),
+            ('chorus', 2),
+            ('verse', 5),
+            ('chorus', 2)
+        ]
+        
+        for i, (expected_type, expected_number) in enumerate(expected_sequence):
+            section = song['expanded_sections'][i]
+            self.assertEqual(section['type'], expected_type)
+            self.assertEqual(section['number'], expected_number)
+        
+        # Verify that repeated choruses have the same content
+        chorus1_instances = [s for s in song['expanded_sections'] if s['type'] == 'chorus' and s['number'] == 1]
+        chorus2_instances = [s for s in song['expanded_sections'] if s['type'] == 'chorus' and s['number'] == 2]
+        
+        # All instances of each chorus should have the same content
+        self.assertEqual(len(set(c['content'] for c in chorus1_instances)), 1)
+        self.assertEqual(len(set(c['content'] for c in chorus2_instances)), 1)
 
 if __name__ == '__main__':
     unittest.main() 
