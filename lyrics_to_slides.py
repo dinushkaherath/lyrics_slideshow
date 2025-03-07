@@ -152,9 +152,9 @@ class LyricsSlideshow:
         Process:
         1. Creates a title slide with presentation name
         2. For each song:
-           - Creates slides for each section (verse/chorus)
-           - Adds consistent headers with song and section numbers
-           - Formats content according to section type
+        - Creates slides for each expanded section (verse/chorus)
+        - Adds consistent headers with song and section numbers
+        - Formats content according to section type
         3. Saves the presentation to specified file
         
         Slide Structure:
@@ -193,8 +193,8 @@ class LyricsSlideshow:
 
         # Process each song
         for song_index, song in enumerate(songs, 1):
-            # Add slides for each section
-            for section in song['sections']:
+            # Add slides for each expanded section
+            for section in song['expanded_sections']:  # Changed from 'sections' to 'expanded_sections'
                 slide = self.prs.slides.add_slide(self.blank_layout)
                 
                 # Set background color
@@ -213,7 +213,7 @@ class LyricsSlideshow:
                     self.LEFT_MARGIN,
                     self.TOP_MARGIN,
                     Inches(6),
-                    self.HEADER_HEIGHT - Inches(0.05),  # Slightly reduce height to prevent overflow
+                    self.HEADER_HEIGHT - Inches(0.05),
                     self.HEADER_SIZE,
                     alignment=PP_ALIGN.LEFT,
                     is_header=True
@@ -227,7 +227,7 @@ class LyricsSlideshow:
                     Inches(7),
                     self.TOP_MARGIN,
                     Inches(2),
-                    self.HEADER_HEIGHT - Inches(0.05),  # Slightly reduce height to prevent overflow
+                    self.HEADER_HEIGHT - Inches(0.05),
                     self.HEADER_SIZE,
                     alignment=PP_ALIGN.RIGHT,
                     is_header=True
