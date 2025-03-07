@@ -7,7 +7,21 @@ class Song(TypedDict):
 
 class SongParser:
     def parse_songs(self, text: str) -> List[Song]:
-        """Parse multiple songs from text input."""
+        """
+        Parses multiple songs from a text input, separating them into structured format.
+        
+        The function:
+        1. Splits the input text into individual songs (separated by 'Song')
+        2. Extracts the title and lyrics for each song
+        3. Parses the lyrics into sections (verses and choruses)
+        4. Creates expanded sections that include repeated choruses
+        
+        Args:
+            text (str): Raw text containing multiple songs
+            
+        Returns:
+            List[Song]: List of parsed songs with their sections and expanded sections
+        """
         # Split text into individual songs
         raw_songs = [s.strip() for s in text.split('Song') if s.strip()]
         songs = []
@@ -38,7 +52,26 @@ class SongParser:
         return songs
     
     def create_expanded_sections(self, sections: List[Dict[str, str]]) -> List[Dict[str, str]]:
-        """Create expanded sections by repeating choruses after verses."""
+        """
+        Creates an expanded version of the song structure by automatically repeating choruses.
+        
+        The function:
+        1. Keeps track of the most recently encountered chorus
+        2. Adds verses as they appear
+        3. Adds the active chorus after each verse if appropriate
+        4. Ensures choruses are repeated logically in the song structure
+        
+        Rules for chorus repetition:
+        - Adds chorus after a verse if we've seen a chorus before
+        - Doesn't add chorus if the next section is already a chorus
+        - Adds the final chorus after the last verse if appropriate
+        
+        Args:
+            sections (List[Dict[str, str]]): Original parsed sections of the song
+            
+        Returns:
+            List[Dict[str, str]]: Expanded sections with repeated choruses
+        """
         expanded = []
         active_chorus = None
         
@@ -67,7 +100,23 @@ class SongParser:
         return expanded
     
     def clean_section_content(self, content: str, remove_verse_number: bool = False) -> str:
-        """Clean section content by removing labels and extra whitespace."""
+        """
+        Cleans up the raw text content of a section by removing labels and formatting.
+        
+        The function:
+        1. Removes verse numbers when specified
+        2. Removes section labels (e.g., "Chorus:", "Verse:")
+        3. Strips extra whitespace
+        4. Ensures consistent formatting
+        
+        Args:
+            content (str): Raw section content
+            remove_verse_number (bool): Whether to remove leading verse numbers
+            
+        Returns:
+            str: Cleaned section content
+        """
+
         lines = content.split('\n')
         
         # Remove verse number if needed
@@ -81,7 +130,26 @@ class SongParser:
         return '\n'.join(line.strip() for line in lines if line.strip())
 
     def parse_lyrics(self, lyrics: str) -> List[Dict[str, str]]:
-        """Parse lyrics into a list of stanzas and identify chorus."""
+        """
+        Parses raw lyrics into structured sections (verses and choruses).
+        
+        The function identifies and handles:
+        1. Standalone chorus references (e.g., "Chorus 1")
+        2. Labeled choruses (e.g., "Chorus 1:")
+        3. Indented choruses (identified by leading spaces)
+        4. Verses (with or without numbers)
+        
+        Section identification rules:
+        - Choruses can be identified by explicit labels or indentation
+        - Verses are numbered either explicitly (e.g., "1.") or sequentially
+        - Each section maintains its type, content, and number
+        
+        Args:
+            lyrics (str): Raw lyrics text
+            
+        Returns:
+            List[Dict[str, str]]: List of parsed sections with their properties
+        """
         # Split lyrics into stanzas
         stanzas = [s for s in lyrics.split('\n\n') if s.strip()]
         parsed_lyrics = []

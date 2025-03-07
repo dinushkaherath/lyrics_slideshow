@@ -9,6 +9,20 @@ from song_parser import SongParser, Song
 
 class LyricsSlideshow:
     def __init__(self):
+        """
+        Creates PowerPoint presentations from parsed song lyrics with consistent formatting and styling.
+        
+        Features:
+        - Creates slides with dark theme and professional typography
+        - Maintains consistent layout across all slides
+        - Differentiates verses and choruses through styling
+        - Includes header information for song and section numbers
+        
+        Styling constants:
+        - Fonts: Helvetica Neue for both titles and body text
+        - Colors: Dark gray background with white text
+        - Sizes: Different font sizes for titles, headers, verses, and choruses
+        """
         self.prs = Presentation()
         self.blank_layout = self.prs.slide_layouts[6]  # Blank layout instead of Title Only layout
         
@@ -36,7 +50,21 @@ class LyricsSlideshow:
         self.LYRICS_HEIGHT = Inches(5)  # Keep this the same
 
     def _add_header_background(self, slide):
-        """Add a darker background for the header area."""
+        """
+        Adds a darker background strip for the header section of each slide.
+        
+        Creates a rectangular shape at the top of the slide that:
+        - Spans the full width of the slide
+        - Has a slightly darker color than the main background
+        - Contains no border
+        - Provides visual separation between header and content
+        
+        Args:
+            slide: PowerPoint slide object to add the header background to
+            
+        Returns:
+            The created shape object for testing purposes
+        """
         header_shape = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
             0,  # Left
@@ -52,7 +80,32 @@ class LyricsSlideshow:
 
     def _add_text_box(self, slide, text: str, left: float, top: float, width: float, height: float, 
                      font_size: int, alignment=PP_ALIGN.CENTER, is_title: bool = False, is_chorus: bool = False, is_header: bool = False):
-        """Add a text box to the slide with specified formatting."""
+        """
+        Creates a formatted text box on the slide with specified parameters.
+        
+        Formatting features:
+        - Handles multi-line text with consistent spacing
+        - Applies different styles for titles, headers, verses, and choruses
+        - Supports text alignment and word wrap
+        - Uses specified font sizes and colors
+        - Applies italic formatting for chorus sections
+        
+        Args:
+            slide: PowerPoint slide to add the text box to
+            text (str): Content to display
+            left (float): Left position of the text box
+            top (float): Top position of the text box
+            width (float): Width of the text box
+            height (float): Height of the text box
+            font_size (int): Size of the font in points
+            alignment: Text alignment (default: center)
+            is_title (bool): Whether this is a title text box
+            is_chorus (bool): Whether this is a chorus section
+            is_header (bool): Whether this is a header text box
+            
+        Returns:
+            The created shape object
+        """
         shape = slide.shapes.add_textbox(left, top, width, height)
         text_frame = shape.text_frame
         text_frame.word_wrap = True
@@ -93,7 +146,30 @@ class LyricsSlideshow:
         return shape
 
     def create_presentation(self, songs: List[Song], output_file: str = "lyrics_slideshow.pptx") -> str:
-        """Create a new presentation with multiple songs."""
+        """
+        Creates a complete PowerPoint presentation from a list of parsed songs.
+        
+        Process:
+        1. Creates a title slide with presentation name
+        2. For each song:
+           - Creates slides for each section (verse/chorus)
+           - Adds consistent headers with song and section numbers
+           - Formats content according to section type
+        3. Saves the presentation to specified file
+        
+        Slide Structure:
+        - Dark background with lighter header strip
+        - Song number and title in top left
+        - Section type and number in top right
+        - Main content in center with appropriate formatting
+        
+        Args:
+            songs (List[Song]): List of parsed song dictionaries
+            output_file (str): Desired output filename
+            
+        Returns:
+            str: Path to the created presentation file
+        """
         # Add title slide
         title_slide = self.prs.slides.add_slide(self.blank_layout)
         
@@ -174,6 +250,13 @@ class LyricsSlideshow:
         return output_file
 
 def main():
+    """
+    Example implementation demonstrating the workflow:
+    1. Parse songs from a text file using SongParser
+    2. Create a new LyricsSlideshow instance
+    3. Generate the presentation with parsed songs
+    4. Save and provide the absolute path to the created file
+    """
     # Example usage
     parser = SongParser()
     slideshow = LyricsSlideshow()
