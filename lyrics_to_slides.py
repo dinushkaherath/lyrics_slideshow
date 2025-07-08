@@ -1,11 +1,9 @@
+from typing import List, Tuple
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
-from typing import List, Dict
-import os
-from song_parser import SongParser, Song
 
 class LyricsSlideshow:
     def __init__(self):
@@ -78,8 +76,9 @@ class LyricsSlideshow:
         header_shape.line.fill.background()  # No border
         return header_shape  # Return the shape for testing
 
-    def _add_text_box(self, slide, text: str, left: float, top: float, width: float, height: float, 
-                     font_size: int, alignment=PP_ALIGN.CENTER, is_title: bool = False, is_chorus: bool = False, is_header: bool = False):
+    def _add_text_box(self, slide, text: str, left: float, top: float, width: float, height: float,
+                      font_size: int, alignment=PP_ALIGN.CENTER, is_title=False,
+                      is_chorus=False, is_header=False):
         """
         Creates a formatted text box on the slide with specified parameters.
         
@@ -142,10 +141,10 @@ class LyricsSlideshow:
             font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
             if is_chorus:
                 font.italic = True
-                
+
         return shape
 
-    def create_presentation(self, songs: List[Song], output_file: str = "lyrics_slideshow.pptx") -> str:
+    def create_presentation_from_tuples(self, songs: List[Tuple[int, str, str]], output_file: str = "lyrics_slideshow.pptx") -> str:
         """
         Creates a complete PowerPoint presentation from a list of parsed songs.
         
@@ -180,8 +179,8 @@ class LyricsSlideshow:
         fill.fore_color.rgb = self.BACKGROUND_COLOR
         
         # Add main title
-        title_shape = self._add_text_box(
-            title_slide, 
+        self._add_text_box(
+            title_slide,
             "Song Lyrics Slideshow",
             self.LEFT_MARGIN,
             Inches(3),
@@ -191,16 +190,9 @@ class LyricsSlideshow:
             is_title=True
         )
 
-        # Process each song
-        for song_index, song in enumerate(songs, 1):
-            # Check if the song has any chorus numbered higher than 1
-            has_multiple_choruses = any(
-                section['type'] == 'chorus' and section['number'] > 1 
-                for section in song['sections']
-            )
-
-            # Add slides for each expanded section
-            for section in song['expanded_sections']:
+        for song_number, title, lyrics in songs:
+            stanzas = [stanza.strip() for stanza in lyrics.split("\n\n") if stanza.strip()]
+            for stanza_index, stanza in enumerate(stanzas, 1):
                 slide = self.prs.slides.add_slide(self.blank_layout)
                 
                 # Set background color
@@ -215,73 +207,39 @@ class LyricsSlideshow:
                 # Add song number and title (top left)
                 self._add_text_box(
                     slide,
-                    f"SONG {song_index}",
+                    f"{song_number}: {title}",
                     self.LEFT_MARGIN,
                     self.TOP_MARGIN,
-                    Inches(6),
+                    Inches(6.5),
                     self.HEADER_HEIGHT - Inches(0.05),
                     self.HEADER_SIZE,
                     alignment=PP_ALIGN.LEFT,
                     is_header=True
                 )
                 
-                # Add section number (top right)
-                if section['type'] == 'chorus':
-                    section_title = f"CHORUS {section['number']}" if has_multiple_choruses else "CHORUS"
-                else:
-                    section_title = f"STANZA {section['number']}"
-
                 self._add_text_box(
                     slide,
-                    section_title,
+                    f"STANZA {stanza_index}",
                     Inches(7),
                     self.TOP_MARGIN,
-                    Inches(2),
+                    Inches(2.5),
                     self.HEADER_HEIGHT - Inches(0.05),
                     self.HEADER_SIZE,
                     alignment=PP_ALIGN.RIGHT,
                     is_header=True
                 )
-                
+
                 # Add lyrics content with maximum width
                 self._add_text_box(
                     slide,
-                    section['content'],
+                    stanza,
                     self.LEFT_MARGIN,
                     self.LYRICS_TOP,
                     self.WIDTH,
                     self.LYRICS_HEIGHT,
-                    self.VERSE_SIZE if section['type'] == 'verse' else self.CHORUS_SIZE,
-                    is_chorus=(section['type'] == 'chorus')
+                    self.VERSE_SIZE
                 )
 
         # Save the presentation
         self.prs.save(output_file)
         return output_file
-
-def main():
-    """
-    Example implementation demonstrating the workflow:
-    1. Parse songs from a text file using SongParser
-    2. Create a new LyricsSlideshow instance
-    3. Generate the presentation with parsed songs
-    4. Save and provide the absolute path to the created file
-    """
-    # Example usage
-    parser = SongParser()
-    slideshow = LyricsSlideshow()
-    
-    # Get lyrics from a file
-    with open('songs.txt', 'r') as f:
-        songs_text = f.read()
-    
-    # Parse songs and create presentation
-    songs = parser.parse_songs(songs_text)
-    output_file = slideshow.create_presentation(songs)
-    
-    # Get absolute path
-    abs_path = os.path.abspath(output_file)
-    print(f"Created presentation: {abs_path}")
-
-if __name__ == '__main__':
-    main() 
