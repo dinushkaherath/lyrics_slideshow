@@ -1,15 +1,23 @@
 import json
 import re
-
 import unicodedata
+from difflib import SequenceMatcher
 
 def normalize(s):
-    # Normalize to lowercase ASCII and remove non-alphanum chars except spaces
+    """Normalize to lowercase ASCII, remove non-alphanum except space."""
     s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode()
     s = re.sub(r"[^\w\s]", "", s)
     return s.lower().strip()
 
-# Sample input
+def similar(a, b):
+    """Return similarity ratio between two strings."""
+    return SequenceMatcher(None, normalize(a), normalize(b)).ratio()
+
+# Load your song JSON (adjust path as needed)
+with open("songs.json", "r", encoding="utf-8") as f:
+    songs = json.load(f)['songs']
+
+# Input song list
 target_songs = [
     "Oh what a mystery!",
     "Never did I dream before (Hymns, 1238)",
@@ -56,65 +64,75 @@ target_songs = [
     "Hear the Lord He's calling onward"
 ]
 
-# Load the JSON song list (replace with file or API load if needed)
-with open("songs.json", "r", encoding="utf-8") as f:
-    songs = json.load(f)['songs']
-
-# Preprocess target titles (extract hymn numbers where present)
+# Strip (Hymns, ####) from target titles
 parsed_targets = []
 for title in target_songs:
-    match = re.match(r"^(.*?)(?:\s+\(Hymns?,?\s*(\d+)\))?$", title.strip())
+    match = re.match(r"^(.*?)(?:\s+\(Hymns?,?\s*\d+\))?$", title.strip())
     if match:
-        base_title = match.group(1).strip().lower()
-        hymn_number = match.group(2)
+        parsed_title = match.group(1)
         parsed_targets.append({
             "original": title,
-            "title": base_title,
-            "hymn_number": hymn_number
+            "title": parsed_title
         })
 
-# Match songs
-matches = []
+# Match logic
+exact_matches = []
+fuzzy_matches = []
+failures = []
+
 for target in parsed_targets:
+    normalized_target = normalize(target["title"])
     found = False
+
     for song in songs:
+        title_norm = normalize(song.get("title", ""))
+        lyrics_norm = normalize(song.get("lyrics", ""))
+        first_line_norm = normalize(song.get("lyrics", "").split("\n", 1)[0])
 
-        target_title_normalized = normalize(target["title"])
-        title_normalized = normalize(song.get("title") or "")
-        lyrics_normalized = normalize(song.get("lyrics") or "")
-
-        # Match by clean title
-        if target_title_normalized in title_normalized or target_title_normalized in lyrics_normalized:
-            matches.append({
-                "match_type": "title or lyrics",
+        if normalized_target in title_norm or normalized_target in lyrics_norm or normalized_target in first_line_norm:
+            exact_matches.append({
                 "original": target["original"],
+                "match_type": "exact match",
                 "song_id": song["id"],
                 "title": song["title"],
                 "lyrics_snippet": song["lyrics"][:100].replace("\n", " ") + "..."
             })
             found = True
             break
-        # Match by hymn number if provided
-        if target["hymn_number"] and target["hymn_number"] in lyrics_normalized:
-            matches.append({
-                "match_type": "hymn number",
-                "original": target["original"],
-                "song_id": song["id"],
-                "title": song["title"],
-                "lyrics_snippet": song["lyrics"][:100].replace("\n", " ") + "..."
-            })
-            found = True
-            break
+
     if not found:
-        matches.append({
-            "original": target["original"],
-            "match_type": "not found"
-        })
+        # Try fuzzy match
+        best_match = None
+        best_score = 0.0
+        for song in songs:
+            score = similar(target["title"], song.get("title", ""))
+            if score > best_score:
+                best_match = song
+                best_score = score
 
-# Output results
-for m in matches:
-    if m["match_type"] == "not found":
-        print(f"[❌] '{m['original']}' not found")
-    else:
-        print(f"[✅] Matched '{m['original']}' → '{m['title']}' (ID: {m['song_id']}) by {m['match_type']}")
-        print(f"     Lyrics: {m['lyrics_snippet']}")
+        if best_score >= 0.85:
+            fuzzy_matches.append({
+                "original": target["original"],
+                "match_type": f"fuzzy match ({best_score:.2f})",
+                "song_id": best_match["id"],
+                "title": best_match["title"],
+                "lyrics_snippet": best_match["lyrics"][:100].replace("\n", " ") + "..."
+            })
+        else:
+            failures.append({ "original": target["original"] })
+
+# Output
+
+print("\n✅ Exact Matches:\n")
+for m in exact_matches:
+    print(f"[✅] '{m['original']}' → '{m['title']}' (ID: {m['song_id']}) via {m['match_type']}")
+    print(f"     Lyrics: {m['lyrics_snippet']}\n")
+
+print("\n🔍 Fuzzy Matches (review recommended):\n")
+for m in fuzzy_matches:
+    print(f"[🔍] '{m['original']}' → '{m['title']}' (ID: {m['song_id']}) via {m['match_type']}")
+    print(f"     Lyrics: {m['lyrics_snippet']}\n")
+
+print("\n❌ No Matches Found:\n")
+for f in failures:
+    print(f"[❌] '{f['original']}' not found")
