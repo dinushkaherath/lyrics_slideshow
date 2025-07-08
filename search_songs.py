@@ -2,6 +2,7 @@ import json
 import re
 import unicodedata
 from difflib import SequenceMatcher
+from lyrics_parser import clean_lyrics
 
 # -------------------------
 # Utils
@@ -130,7 +131,7 @@ def search_songs(song_json_path, targets_txt_path):
     }
 
 # -------------------------
-# New function: get all lyrics in order
+# New function: get all lyrics in order and cleaned
 # -------------------------
 
 def get_cleaned_lyrics_tuples(result):
@@ -147,18 +148,6 @@ def get_cleaned_lyrics_tuples(result):
         output.append((line_number, title, lyrics))
 
     return output
-
-def clean_lyrics(text):
-    cleaned_lines = []
-    for line in text.splitlines():
-        # Skip lines that start with a hashtag
-        if line.lstrip().startswith('#'):
-            continue
-        # Remove chords in brackets but preserve whitespace
-        cleaned_line = re.sub(r"\[.*?\]", "", line)
-        cleaned_lines.append(cleaned_line.rstrip())  # preserve left spaces, trim right
-
-    return "\n".join(cleaned_lines).strip()
 
 # -------------------------
 # CLI Demo (Optional)
