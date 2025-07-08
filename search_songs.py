@@ -130,6 +130,37 @@ def search_songs(song_json_path, targets_txt_path):
     }
 
 # -------------------------
+# New function: get all lyrics in order
+# -------------------------
+
+def get_cleaned_lyrics_tuples(result):
+    combined = []
+    for category in ("exact_matches_hymn", "exact_matches_title", "fuzzy_matches"):
+        combined.extend(result[category])
+    combined_sorted = sorted(combined, key=lambda x: x["line_number"])
+
+    output = []
+    for item in combined_sorted:
+        line_number = item["line_number"]
+        title = item["title"]
+        lyrics = clean_lyrics(item["lyrics"])
+        output.append((line_number, title, lyrics))
+
+    return output
+
+def clean_lyrics(text):
+    cleaned_lines = []
+    for line in text.splitlines():
+        # Skip lines that start with a hashtag
+        if line.lstrip().startswith('#'):
+            continue
+        # Remove chords in brackets but preserve whitespace
+        cleaned_line = re.sub(r"\[.*?\]", "", line)
+        cleaned_lines.append(cleaned_line.rstrip())  # preserve left spaces, trim right
+
+    return "\n".join(cleaned_lines).strip()
+
+# -------------------------
 # CLI Demo (Optional)
 # -------------------------
 
