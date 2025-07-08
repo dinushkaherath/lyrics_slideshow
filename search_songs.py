@@ -143,3 +143,21 @@ print_block("Fuzzy Matches (review recommended)", "🔍", fuzzy_matches)
 print("\n❌ No Matches Found:\n")
 for f in sorted(failures, key=lambda x: x["line_number"]):
     print(f"{f['line_number']:2d}. [❌] '{f['original']}' not found")
+
+# -------------------------
+# Summary
+# -------------------------
+
+total = len(parsed_targets)
+
+def summarize(label, symbol, items):
+    count = len(items)
+    percent = (count / total) * 100 if total > 0 else 0
+    lines = ", ".join(str(i["line_number"]) for i in sort_by_line(items))
+    print(f"{symbol} {label}: {count}/{total} ({percent:.1f}%) → songs: {lines if lines else '—'}")
+
+print("\n📊 Summary:\n")
+summarize("Matched by Hymn Number", "✅", exact_matches_hymn)
+summarize("Matched by Title/Lyrics", "✅", exact_matches_title)
+summarize("Fuzzy Matched", "🔍", fuzzy_matches)
+summarize("No Match Found", "❌", failures)
