@@ -158,6 +158,7 @@ class LyricsSlideshow:
         text_frame = shape.text_frame
         text_frame.word_wrap = True
         text_frame.auto_size = None  # Let text wrap within the box
+        text_frame.vertical_anchor = MSO_VERTICAL_ANCHOR.MIDDLE
 
         # Split text into lines and add each line as a separate paragraph
         lines = text.split('\n')
