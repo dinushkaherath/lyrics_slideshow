@@ -95,6 +95,26 @@ class LyricsSlideshow:
         except Exception as e:
             print(f"Error adding home icon: {e}")
 
+    def _add_restart_song_icon(self, slide, target_slide, icon_path="assets/restart.png"):
+        """
+        Adds a clickable 'restart song' icon in the top-right corner of the slide.
+        Clicking it takes the user to the first slide of the song.
+
+        Args:
+            slide: The slide to add the icon to.
+            target_slide: The slide to link to (first slide of the song).
+            icon_path (str): Path to the restart icon image.
+        """
+        icon_width = Inches(0.93)
+        icon_height = Inches(0.75)
+        left = Inches(12.06)
+        top = Inches(6)
+
+        try:
+            pic = slide.shapes.add_picture(icon_path, left, top, width=icon_width, height=icon_height)
+            pic.click_action.target_slide = target_slide
+        except Exception as e:
+            print(f"⚠️ Error adding restart icon: {e}")
 
     def _add_header_background(self, slide):
         """
@@ -249,9 +269,12 @@ class LyricsSlideshow:
         song_titles = [song[1] for song in songs]
         song_list_slide = self._add_song_list_slide(song_titles)
 
+        first_slide = title_slide
         for song_number, title, chorus_count, sections in songs:
-            for section in sections:
+            for slide_index, section in enumerate(sections):
                 slide = self.prs.slides.add_slide(self.blank_layout)
+                if slide_index == 0:
+                    first_slide = slide
 
                 # Set background color
                 background = slide.background
@@ -309,6 +332,9 @@ class LyricsSlideshow:
                     font_size=self.STANZA_SIZE if section['type'] == 'stanza' else self.CHORUS_SIZE,
                     is_chorus=(section['type'] == 'chorus')
                 )
+
+                if slide_index == len(sections) - 1:  # Last slide of the song
+                    self._add_restart_song_icon(slide, first_slide)
 
         # Save the presentation
         self.prs.save(output_file)
