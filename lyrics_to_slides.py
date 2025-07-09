@@ -59,8 +59,6 @@ class LyricsSlideshow:
         # Helper
         self.song_title_to_slide = {}
 
-        self.song_list_slide = None
-
     def _calculate_dynamic_font_size(self, text: str, is_chorus: bool = False) -> Pt:
         """
         Dynamically calculates font size based on actual text wrapping.
@@ -250,6 +248,9 @@ class LyricsSlideshow:
             font_type=self.TITLE_FONT
         )
 
+        song_titles = [song[1] for song in songs]
+        song_list_slide = self._add_song_list_slide(song_titles)
+
         for song_number, title, chorus_count, sections in songs:
             for slide_index, section in enumerate(sections):
                 slide = self.prs.slides.add_slide(self.blank_layout)
@@ -299,7 +300,7 @@ class LyricsSlideshow:
                     font_type=self.HEADER_FONT
                 )
 
-                self._add_home_icon(slide, self.song_list_slide)
+                self._add_home_icon(slide, song_list_slide)
 
                 # Add lyrics content with maximum width
                 self._add_text_box(
@@ -317,7 +318,7 @@ class LyricsSlideshow:
         self.prs.save(output_file)
         return output_file
 
-    def add_song_list_slide(self, song_titles: List[str]):
+    def _add_song_list_slide(self, song_titles: List[str]):
         """
         Adds a clean grid-style slide listing all song titles, each inside a
         bordered rectangle with small font and no extra text boxes.
@@ -379,4 +380,4 @@ class LyricsSlideshow:
             run.font.size = Pt(14)  # Smaller font
             run.font.name = self.BODY_FONT
             run.font.color.rgb = self.TEXT_COLOR
-        self.song_list_slide = slide
+        return slide

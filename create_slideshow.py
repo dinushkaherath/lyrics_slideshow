@@ -10,7 +10,6 @@ def main():
     cleaned_tuples = get_cleaned_lyrics_tuples(result)
 
     slideshow = LyricsSlideshow()
-    slideshow.add_song_list_slide(song_titles)
     path = slideshow.create_presentation_from_parsed_sections(cleaned_tuples)
 
     full_path = os.path.abspath(path)
