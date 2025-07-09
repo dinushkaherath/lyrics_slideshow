@@ -1,9 +1,12 @@
+import math
+
 from typing import List, Tuple, Dict
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import PP_ALIGN, MSO_VERTICAL_ANCHOR
+
 
 class LyricsSlideshow:
     def __init__(self):
@@ -47,6 +50,9 @@ class LyricsSlideshow:
         self.HEADER_HEIGHT = Inches(0.4)  # Keep this the same
         self.LYRICS_TOP = Inches(0.8)  # Keep this the same
         self.LYRICS_HEIGHT = Inches(5)  # Keep this the same
+
+        # Helper
+        self.song_title_to_slide = {}
 
     def _calculate_dynamic_font_size(self, text: str, is_chorus: bool = False) -> Pt:
         """
@@ -213,8 +219,10 @@ class LyricsSlideshow:
         )
 
         for song_number, title, chorus_count, sections in songs:
-            for section in sections:
+            for slide_index, section in enumerate(sections):
                 slide = self.prs.slides.add_slide(self.blank_layout)
+                if slide_index == 0:
+                    self.song_title_to_slide[f"{song_number}: {title}"] = slide
 
                 # Set background color
                 background = slide.background
@@ -274,3 +282,66 @@ class LyricsSlideshow:
         # Save the presentation
         self.prs.save(output_file)
         return output_file
+
+    def add_song_list_slide(self, song_titles: List[str]):
+        """
+        Adds a clean grid-style slide listing all song titles, each inside a
+        bordered rectangle with small font and no extra text boxes.
+        Matches the provided visual style precisely.
+        """
+        slide = self.prs.slides.add_slide(self.blank_layout)
+
+        # Set background color
+        slide.background.fill.solid()
+        slide.background.fill.fore_color.rgb = self.HEADER_BACKGROUND_COLOR
+
+        # Grid configuration
+        num_columns = 3
+        box_width = Inches(3.25)
+        box_height = Inches(0.5)  # Smaller box
+        spacing_x = Inches(0)
+        spacing_y = Inches(0)
+        left_start = Inches(0)
+        top_start = Inches(0)
+
+        for slide_index, title in enumerate(song_titles):
+            col = slide_index % num_columns
+            row = slide_index // num_columns
+            number = slide_index + 1
+            full_title = f"{number} – {title}"
+
+            left = left_start + col * (box_width + spacing_x)
+            top = top_start + row * (box_height + spacing_y)
+
+            # Create the rectangle (serves as background + border + text container)
+            shape = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                left,
+                top,
+                box_width,
+                box_height
+            )
+
+            # Set fill color
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = self.HEADER_BACKGROUND_COLOR
+
+            # Set border (white thin line)
+            shape.line.color.rgb = self.HEADER_TEXT_COLOR
+            shape.line.width = Pt(0.75)
+
+            # shape.click_action.target_slide = target_slide
+
+            # Add text directly in shape
+            text_frame = shape.text_frame
+            text_frame.text = full_title
+            text_frame.vertical_anchor = MSO_VERTICAL_ANCHOR.MIDDLE
+            text_frame.word_wrap = True
+
+            # Format paragraph
+            p = text_frame.paragraphs[0]
+            p.alignment = PP_ALIGN.LEFT
+            run = p.runs[0]
+            run.font.size = Pt(11)  # Smaller font
+            run.font.name = self.BODY_FONT
+            run.font.color.rgb = self.TEXT_COLOR
