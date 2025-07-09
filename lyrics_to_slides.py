@@ -13,13 +13,13 @@ class LyricsSlideshow:
         Features:
         - Creates slides with dark theme and professional typography
         - Maintains consistent layout across all slides
-        - Differentiates verses and choruses through styling
+        - Differentiates stanzas and choruses through styling
         - Includes header information for song and section numbers
         
         Styling constants:
         - Fonts: Helvetica Neue for both titles and body text
         - Colors: Dark gray background with white text
-        - Sizes: Different font sizes for titles, headers, verses, and choruses
+        - Sizes: Different font sizes for titles, headers, stanzas, and choruses
         """
         self.prs = Presentation()
         self.blank_layout = self.prs.slide_layouts[6]  # Blank layout instead of Title Only layout
@@ -29,7 +29,7 @@ class LyricsSlideshow:
         self.BODY_FONT = "Helvetica Neue"
         self.TITLE_SIZE = Pt(44)  # Main title slide
         self.HEADER_SIZE = Pt(24)  # Top headers on content slides
-        self.VERSE_SIZE = Pt(32)   # Reduced from 44
+        self.STANZA_SIZE = Pt(32)   # Reduced from 44
         self.CHORUS_SIZE = Pt(28)  # Reduced from 40
         
         # Define colors
@@ -84,7 +84,7 @@ class LyricsSlideshow:
         
         Formatting features:
         - Handles multi-line text with consistent spacing
-        - Applies different styles for titles, headers, verses, and choruses
+        - Applies different styles for titles, headers, stanzas, and choruses
         - Supports text alignment and word wrap
         - Uses specified font sizes and colors
         - Applies italic formatting for chorus sections
@@ -151,7 +151,7 @@ class LyricsSlideshow:
         Process:
         1. Creates a title slide with presentation name
         2. For each song:
-        - Creates slides for each expanded section (verse/chorus)
+        - Creates slides for each expanded section (stanza/chorus)
         - Adds consistent headers with song and section numbers
         - Formats content according to section type
         3. Saves the presentation to specified file
@@ -239,7 +239,7 @@ class LyricsSlideshow:
                     self.LYRICS_TOP,
                     self.WIDTH,
                     self.LYRICS_HEIGHT,
-                    self.VERSE_SIZE if section['type'] == 'verse' else self.CHORUS_SIZE,
+                    self.STANZA_SIZE if section['type'] == 'stanza' else self.CHORUS_SIZE,
                     is_chorus=(section['type'] == 'chorus')
                 )
 
