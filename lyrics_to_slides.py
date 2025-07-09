@@ -25,6 +25,11 @@ class LyricsSlideshow:
         - Sizes: Different font sizes for titles, headers, stanzas, and choruses
         """
         self.prs = Presentation()
+
+        # Set slide size to 16:9
+        self.prs.slide_width = Inches(13.333)
+        self.prs.slide_height = Inches(7.5)
+
         self.blank_layout = self.prs.slide_layouts[6]  # Blank layout instead of Title Only layout
 
         # Define styles
@@ -46,7 +51,7 @@ class LyricsSlideshow:
         self.LEFT_MARGIN = Inches(0.3)  # Reduced from 1
         self.RIGHT_MARGIN = Inches(9.7)  # Increased from 9
         self.TOP_MARGIN = Inches(0.05)  # Keep this the same for header
-        self.WIDTH = Inches(9.4)  # Increased from 8 (difference between RIGHT_MARGIN and LEFT_MARGIN)
+        self.WIDTH = Inches(12.7)  # Increased from 8 (difference between RIGHT_MARGIN and LEFT_MARGIN)
         self.HEADER_HEIGHT = Inches(0.4)  # Keep this the same
         self.LYRICS_TOP = Inches(0.8)  # Keep this the same
         self.LYRICS_HEIGHT = Inches(5)  # Keep this the same
@@ -93,7 +98,7 @@ class LyricsSlideshow:
             MSO_SHAPE.RECTANGLE,
             0,  # Left
             0,  # Top
-            Inches(10),  # Width (full slide width)
+            Inches(13.333),  # Width (full slide width)
             self.HEADER_HEIGHT + Inches(0.1)  # Height - slightly taller than text for padding
         )
         fill = header_shape.fill
@@ -139,6 +144,9 @@ class LyricsSlideshow:
         # Split text into lines and add each line as a separate paragraph
         lines = text.split('\n')
 
+        if not is_header:
+            font_size = self._calculate_dynamic_font_size(text, is_chorus)
+
         # Add first line
         first_paragraph = text_frame.paragraphs[0]
         first_paragraph.text = lines[0].upper() if is_header else lines[0]
@@ -148,8 +156,7 @@ class LyricsSlideshow:
         # Format first paragraph
         font = first_paragraph.font
         font.size = font_size
-        if not is_header:
-            font_size = self._calculate_dynamic_font_size(text, is_chorus)
+        
         font.name = font_type
         font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
         if is_chorus:
@@ -257,7 +264,7 @@ class LyricsSlideshow:
                 self._add_text_box(
                     slide,
                     section_label,
-                    Inches(7),
+                    Inches(10),
                     self.TOP_MARGIN,
                     Inches(2.5),
                     self.HEADER_HEIGHT - Inches(0.05),
