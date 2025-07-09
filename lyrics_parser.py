@@ -1,5 +1,17 @@
 import re
+import os
+import json
+
 from typing import List, Dict
+
+# This can live in memory
+_lyrics_version_cache = {}
+CACHE_FILE = "version_choices.json"
+
+# Load cache from disk if available
+if os.path.exists(CACHE_FILE):
+    with open(CACHE_FILE, "r", encoding="utf-8") as f:
+        _lyrics_version_cache = json.load(f)
 
 def clean_lyrics(text):
     cleaned_lines = []
@@ -24,7 +36,7 @@ def parse_lyrics_sections(text: str) -> List[Dict]:
     - Lines with only a number (e.g., "1", "2") are stanza markers and signal the start of a new stanza.
     - Lines that are indented (start with 2 or more spaces) are treated as part of a chorus.
     - Empty lines signal the end of a section.
-    
+
     Returns:
         List[Dict]: A list of dictionaries, each with keys:
             - 'type': 'stanza' or 'chorus'
@@ -91,6 +103,48 @@ def parse_lyrics_sections(text: str) -> List[Dict]:
 
     flush_block()  # Final section flush at EOF
     return chorus_number, sections
+
+def choose_lyrics_version(song_title, lyrics, persist=True):
+    """
+    Choose a version of lyrics if multiple are found (based on '### ' headers).
+    Caches user choice by song title.
+    """
+    headers = list(re.finditer(r'^###\s+(.+)$', lyrics, re.MULTILINE))
+    
+    if not headers:
+        return lyrics  # No versions to choose
+
+    if song_title in _lyrics_version_cache:
+        chosen_header = _lyrics_version_cache[song_title]
+        print(f"✅ Using cached version for '{song_title}': {chosen_header}")
+    else:
+        print(f"\n🎵 Song: {song_title}")
+        print("Multiple versions detected:")
+        for i, match in enumerate(headers):
+            print(f"  {i + 1}. {match.group(1)}")
+
+        while True:
+            try:
+                choice = int(input("Choose version number: ")) - 1
+                if 0 <= choice < len(headers):
+                    break
+            except ValueError:
+                pass
+            print("Invalid choice. Try again.")
+
+        chosen_header = headers[choice].group(1)
+        _lyrics_version_cache[song_title] = chosen_header
+
+        if persist:
+            with open(CACHE_FILE, "w", encoding="utf-8") as f:
+                json.dump(_lyrics_version_cache, f, indent=2, ensure_ascii=False)
+
+    # Extract the selected version block
+    selected_index = next(i for i, h in enumerate(headers) if h.group(1) == chosen_header)
+    start = headers[selected_index].end()
+    end = headers[selected_index + 1].start() if selected_index + 1 < len(headers) else len(lyrics)
+
+    return lyrics[start:end].strip()
 
 # Example usage:
 if __name__ == "__main__":

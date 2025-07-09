@@ -2,7 +2,7 @@ import json
 import re
 import unicodedata
 from difflib import SequenceMatcher
-from lyrics_parser import clean_lyrics, parse_lyrics_sections
+from lyrics_parser import choose_lyrics_version, clean_lyrics, parse_lyrics_sections
 
 # -------------------------
 # Utils
@@ -144,7 +144,9 @@ def get_cleaned_lyrics_tuples(result):
     for item in combined_sorted:
         line_number = item["line_number"]
         title = item["title"]
-        lyrics = clean_lyrics(item["lyrics"])
+        lyrics_raw = item["lyrics"]
+        lyrics_chosen = choose_lyrics_version(title, lyrics_raw)
+        lyrics = clean_lyrics(lyrics_chosen)
         choruses, parsed_lyrics = parse_lyrics_sections(lyrics)
         output.append((line_number, title, choruses, parsed_lyrics))
 
