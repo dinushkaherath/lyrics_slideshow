@@ -56,9 +56,6 @@ class LyricsSlideshow:
         self.LYRICS_TOP = Inches(0.8)  # Keep this the same
         self.LYRICS_HEIGHT = Inches(5)  # Keep this the same
 
-        # Helper
-        self.song_title_to_slide = {}
-
     def _calculate_dynamic_font_size(self, text: str, is_chorus: bool = False) -> Pt:
         """
         Dynamically calculates font size based on actual text wrapping.
@@ -254,8 +251,6 @@ class LyricsSlideshow:
         for song_number, title, chorus_count, sections in songs:
             for slide_index, section in enumerate(sections):
                 slide = self.prs.slides.add_slide(self.blank_layout)
-                if slide_index == 0:
-                    self.song_title_to_slide[f"{song_number}: {title}"] = slide
 
                 # Set background color
                 background = slide.background
