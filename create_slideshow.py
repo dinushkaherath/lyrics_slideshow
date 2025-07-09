@@ -1,8 +1,9 @@
 import os
+import platform
 from lyrics_to_slides import LyricsSlideshow
 from search_songs import get_cleaned_lyrics_tuples, search_songs, load_target_songs
 
-song_titles = [d['original'] for d in load_target_songs('target_songs.txt')] # TODO move this into LyricsSlideshow
+song_titles = [d['original'] for d in load_target_songs('target_songs.txt')]  # TODO move this into LyricsSlideshow
 
 def main():
     result = search_songs("songs.json", "target_songs.txt")
@@ -11,7 +12,17 @@ def main():
     slideshow = LyricsSlideshow()
     slideshow.add_song_list_slide(song_titles)
     path = slideshow.create_presentation_from_parsed_sections(cleaned_tuples)
-    print(f"✅ PowerPoint created: {os.path.abspath(path)}")
+
+    full_path = os.path.abspath(path)
+    print(f"✅ PowerPoint created: {full_path}")
+
+    # Open the file automatically
+    if platform.system() == "Windows":
+        os.startfile(full_path)
+    elif platform.system() == "Darwin":  # macOS
+        os.system(f"open \"{full_path}\"")
+    elif platform.system() == "Linux":
+        os.system(f"xdg-open \"{full_path}\"")
 
 if __name__ == "__main__":
     main()
