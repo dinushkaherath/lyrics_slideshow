@@ -1,5 +1,3 @@
-import math
-
 from typing import List, Tuple, Dict
 from pptx import Presentation
 from pptx.util import Inches, Pt
@@ -176,7 +174,7 @@ class LyricsSlideshow:
         # Format first paragraph
         font = first_paragraph.font
         font.size = font_size
-        
+
         font.name = font_type
         font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
         if is_chorus:
@@ -199,7 +197,9 @@ class LyricsSlideshow:
 
         return shape
 
-    def create_presentation_from_parsed_sections(self, songs: List[Tuple[int, str, int, List[Dict]]], output_file: str = "lyrics_slideshow.pptx") -> str:
+    def create_presentation_from_parsed_sections(self,
+                                                 songs: List[Tuple[int, str, int, List[Dict]]],
+                                                 output_file: str = "lyrics_slideshow.pptx") -> str:
         """
         Creates a complete PowerPoint presentation from a list of parsed songs.
         
@@ -249,7 +249,7 @@ class LyricsSlideshow:
         song_list_slide = self._add_song_list_slide(song_titles)
 
         for song_number, title, chorus_count, sections in songs:
-            for slide_index, section in enumerate(sections):
+            for section in sections:
                 slide = self.prs.slides.add_slide(self.blank_layout)
 
                 # Set background color
@@ -278,7 +278,7 @@ class LyricsSlideshow:
                 section_type = section["type"].upper()
                 section_label = (
                     f"CHORUS {section['number']}" if section_type == "CHORUS" and chorus_count > 1
-                    else f"CHORUS" if section_type == "CHORUS"
+                    else "CHORUS" if section_type == "CHORUS"
                     else f"STANZA {section['number']}"
                 )
 
@@ -375,4 +375,5 @@ class LyricsSlideshow:
             run.font.size = Pt(14)  # Smaller font
             run.font.name = self.BODY_FONT
             run.font.color.rgb = self.TEXT_COLOR
+
         return slide
