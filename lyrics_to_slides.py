@@ -30,7 +30,7 @@ class LyricsSlideshow:
         self.HEADER_FONT = "Calibri"
         self.TITLE_SIZE = Pt(44)  # Main title slide
         self.HEADER_SIZE = Pt(24)  # Top headers on content slides
-        self.STANZA_SIZE = Pt(32)
+        self.STANZA_SIZE = Pt(28)
         self.CHORUS_SIZE = Pt(28)
 
         # Define colors
@@ -47,6 +47,25 @@ class LyricsSlideshow:
         self.HEADER_HEIGHT = Inches(0.4)  # Keep this the same
         self.LYRICS_TOP = Inches(0.8)  # Keep this the same
         self.LYRICS_HEIGHT = Inches(5)  # Keep this the same
+
+    def _calculate_dynamic_font_size(self, text: str, is_chorus: bool = False) -> Pt:
+        """
+        Dynamically calculates font size based on actual text wrapping.
+        Assumes average character width and screen line width.
+        """
+        base_size = 28
+        min_size = 18
+        max_display_lines = 12 if is_chorus else 14
+        max_chars_per_line = 50  # empirically reasonable for ~28pt on widescreen slide
+
+        # Count actual visual lines based on wrap
+        raw_lines = text.split('\n')
+        estimated_line_count = sum((len(line) // max_chars_per_line + 1) for line in raw_lines)
+
+        scale = min(1.0, max_display_lines / max(estimated_line_count, 1))
+        size = int(base_size * scale)
+        return Pt(max(size, min_size))
+
 
     def _add_header_background(self, slide):
         """
@@ -123,6 +142,8 @@ class LyricsSlideshow:
         # Format first paragraph
         font = first_paragraph.font
         font.size = font_size
+        if not is_header:
+            font_size = self._calculate_dynamic_font_size(text, is_chorus)
         font.name = font_type
         font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
         if is_chorus:
