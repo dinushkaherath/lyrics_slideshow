@@ -29,14 +29,14 @@ class LyricsSlideshow:
         self.BODY_FONT = "Helvetica Neue"
         self.TITLE_SIZE = Pt(44)  # Main title slide
         self.HEADER_SIZE = Pt(24)  # Top headers on content slides
-        self.STANZA_SIZE = Pt(32)   # Reduced from 44
-        self.CHORUS_SIZE = Pt(28)  # Reduced from 40
-        
+        self.STANZA_SIZE = Pt(32)
+        self.CHORUS_SIZE = Pt(28)
+
         # Define colors
-        self.BACKGROUND_COLOR = RGBColor(40, 40, 40)  # Dark gray background
-        self.HEADER_BACKGROUND_COLOR = RGBColor(30, 30, 30)  # Slightly darker for header
-        self.TEXT_COLOR = RGBColor(255, 255, 255)  # White text
-        self.HEADER_TEXT_COLOR = RGBColor(200, 200, 200)  # Slightly dimmed white for headers
+        self.BACKGROUND_COLOR = RGBColor(45, 20, 18)
+        self.HEADER_BACKGROUND_COLOR = RGBColor(190, 71, 54)
+        self.TEXT_COLOR = RGBColor(244, 243, 237)
+        self.HEADER_TEXT_COLOR = RGBColor(244, 243, 237)
         
         # Define positions - Maximizing width by reducing margins
         self.LEFT_MARGIN = Inches(0.3)  # Reduced from 1
@@ -217,7 +217,11 @@ class LyricsSlideshow:
                 )
 
                 section_type = section["type"].upper()
-                section_label = f"{section_type} {section['number']}" if (section_type == "CHORUS" and chorus_count > 1) or section_type == "STANZA" else section_type
+                section_label = (
+                    f"CHORUS {section['number']}" if section_type == "CHORUS" and chorus_count > 1
+                    else f"CHORUS" if section_type == "CHORUS"
+                    else f"STANZA {section['number']}"
+                )
 
                 self._add_text_box(
                     slide,
