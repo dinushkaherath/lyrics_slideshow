@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 from pptx import Presentation
 from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
@@ -144,7 +144,7 @@ class LyricsSlideshow:
 
         return shape
 
-    def create_presentation_from_tuples(self, songs: List[Tuple[int, str, str]], output_file: str = "lyrics_slideshow.pptx") -> str:
+    def create_presentation_from_parsed_sections(self, songs: List[Tuple[int, str, int, List[Dict]]], output_file: str = "lyrics_slideshow.pptx") -> str:
         """
         Creates a complete PowerPoint presentation from a list of parsed songs.
         
@@ -171,13 +171,13 @@ class LyricsSlideshow:
         """
         # Add title slide
         title_slide = self.prs.slides.add_slide(self.blank_layout)
-        
+
         # Set background color for title slide
         background = title_slide.background
         fill = background.fill
         fill.solid()
         fill.fore_color.rgb = self.BACKGROUND_COLOR
-        
+
         # Add main title
         self._add_text_box(
             title_slide,
@@ -190,20 +190,19 @@ class LyricsSlideshow:
             is_title=True
         )
 
-        for song_number, title, lyrics in songs:
-            stanzas = [stanza.strip() for stanza in lyrics.split("\n\n") if stanza.strip()]
-            for stanza_index, stanza in enumerate(stanzas, 1):
+        for song_number, title, chorus_count, sections in songs:
+            for section in sections:
                 slide = self.prs.slides.add_slide(self.blank_layout)
-                
+
                 # Set background color
                 background = slide.background
                 fill = background.fill
                 fill.solid()
                 fill.fore_color.rgb = self.BACKGROUND_COLOR
-                
+
                 # Add header background
                 self._add_header_background(slide)
-                
+
                 # Add song number and title (top left)
                 self._add_text_box(
                     slide,
@@ -216,10 +215,13 @@ class LyricsSlideshow:
                     alignment=PP_ALIGN.LEFT,
                     is_header=True
                 )
-                
+
+                section_type = section["type"].upper()
+                section_label = f"{section_type} {section['number']}" if (section_type == "CHORUS" and chorus_count > 1) or section_type == "STANZA" else section_type
+
                 self._add_text_box(
                     slide,
-                    f"STANZA {stanza_index}",
+                    section_label,
                     Inches(7),
                     self.TOP_MARGIN,
                     Inches(2.5),
@@ -232,12 +234,13 @@ class LyricsSlideshow:
                 # Add lyrics content with maximum width
                 self._add_text_box(
                     slide,
-                    stanza,
+                    section['content'],
                     self.LEFT_MARGIN,
                     self.LYRICS_TOP,
                     self.WIDTH,
                     self.LYRICS_HEIGHT,
-                    self.VERSE_SIZE
+                    self.VERSE_SIZE if section['type'] == 'verse' else self.CHORUS_SIZE,
+                    is_chorus=(section['type'] == 'chorus')
                 )
 
         # Save the presentation

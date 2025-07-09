@@ -8,7 +8,7 @@ def main():
     cleaned_tuples = get_cleaned_lyrics_tuples(result)
 
     slideshow = LyricsSlideshow()
-    path = slideshow.create_presentation_from_tuples(cleaned_tuples)
+    path = slideshow.create_presentation_from_parsed_sections(cleaned_tuples)
     print(f"✅ PowerPoint created: {os.path.abspath(path)}")
 
 if __name__ == "__main__":
