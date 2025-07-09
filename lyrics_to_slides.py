@@ -48,7 +48,7 @@ class LyricsSlideshow:
         # Define positions - Maximizing width by reducing margins
         self.LEFT_MARGIN = Inches(0.3)  # Reduced from 1
         self.RIGHT_MARGIN = Inches(9.7)  # Increased from 9
-        self.TOP_MARGIN = Inches(0.05)  # Keep this the same for header
+        self.BOTTOM_MARGIN = Inches(7)
         self.WIDTH = Inches(12.7)  # Increased from 8 (difference between RIGHT_MARGIN and LEFT_MARGIN)
         self.HEADER_HEIGHT = Inches(0.4)  # Keep this the same
         self.LYRICS_TOP = Inches(0.8)  # Keep this the same
@@ -86,11 +86,11 @@ class LyricsSlideshow:
 
         # Position at the far right, with a small margin
         left = self.prs.slide_width - icon_width - Inches(0.2)
-        top = Inches(0.05)
+        bottom = Inches(7)
 
         # Insert the image
         try:
-            icon = slide.shapes.add_picture(icon_path, left, top, width=icon_width, height=icon_height)
+            icon = slide.shapes.add_picture(icon_path, left, bottom, width=icon_width, height=icon_height)
             icon.click_action.target_slide = target_slide
         except Exception as e:
             print(f"Error adding home icon: {e}")
@@ -115,7 +115,7 @@ class LyricsSlideshow:
         header_shape = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
             0,  # Left
-            0,  # Top
+            self.BOTTOM_MARGIN,  # Top
             Inches(13.333),  # Width (full slide width)
             self.HEADER_HEIGHT + Inches(0.1)  # Height - slightly taller than text for padding
         )
