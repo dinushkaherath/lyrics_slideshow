@@ -304,7 +304,7 @@ class LyricsSlideshow:
 
         # Grid configuration
         num_columns = 3
-        box_width = Inches(3.25)
+        box_width = Inches(4.45)
         box_height = Inches(0.5)  # Smaller box
         spacing_x = Inches(0)
         spacing_y = Inches(0)
@@ -349,6 +349,6 @@ class LyricsSlideshow:
             p = text_frame.paragraphs[0]
             p.alignment = PP_ALIGN.LEFT
             run = p.runs[0]
-            run.font.size = Pt(11)  # Smaller font
+            run.font.size = Pt(14)  # Smaller font
             run.font.name = self.BODY_FONT
             run.font.color.rgb = self.TEXT_COLOR
