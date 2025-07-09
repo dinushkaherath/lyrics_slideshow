@@ -23,7 +23,7 @@ class LyricsSlideshow:
         """
         self.prs = Presentation()
         self.blank_layout = self.prs.slide_layouts[6]  # Blank layout instead of Title Only layout
-        
+
         # Define styles
         self.TITLE_FONT = "Helvetica Neue"
         self.BODY_FONT = "Helvetica Neue"
@@ -37,7 +37,7 @@ class LyricsSlideshow:
         self.HEADER_BACKGROUND_COLOR = RGBColor(190, 71, 54)
         self.TEXT_COLOR = RGBColor(244, 243, 237)
         self.HEADER_TEXT_COLOR = RGBColor(244, 243, 237)
-        
+
         # Define positions - Maximizing width by reducing margins
         self.LEFT_MARGIN = Inches(0.3)  # Reduced from 1
         self.RIGHT_MARGIN = Inches(9.7)  # Increased from 9
@@ -109,16 +109,16 @@ class LyricsSlideshow:
         text_frame = shape.text_frame
         text_frame.word_wrap = True
         text_frame.auto_size = None  # Let text wrap within the box
-        
+
         # Split text into lines and add each line as a separate paragraph
         lines = text.split('\n')
-        
+
         # Add first line
         first_paragraph = text_frame.paragraphs[0]
         first_paragraph.text = lines[0].upper() if is_header else lines[0]
         first_paragraph.alignment = alignment
         first_paragraph.line_spacing = 1.0  # Single line spacing
-        
+
         # Format first paragraph
         font = first_paragraph.font
         font.size = font_size
@@ -126,14 +126,14 @@ class LyricsSlideshow:
         font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
         if is_chorus:
             font.italic = True
-            
+
         # Add remaining lines
         for line in lines[1:]:
             paragraph = text_frame.add_paragraph()
             paragraph.text = line.upper() if is_header else line
             paragraph.alignment = alignment
             paragraph.line_spacing = 1.0  # Single line spacing
-            
+
             # Format paragraph
             font = paragraph.font
             font.size = font_size
