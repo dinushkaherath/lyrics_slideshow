@@ -25,8 +25,9 @@ class LyricsSlideshow:
         self.blank_layout = self.prs.slide_layouts[6]  # Blank layout instead of Title Only layout
 
         # Define styles
-        self.TITLE_FONT = "Helvetica Neue"
-        self.BODY_FONT = "Helvetica Neue"
+        self.TITLE_FONT = "Lora"
+        self.BODY_FONT = "Helvetica"
+        self.HEADER_FONT = "Calibri"
         self.TITLE_SIZE = Pt(44)  # Main title slide
         self.HEADER_SIZE = Pt(24)  # Top headers on content slides
         self.STANZA_SIZE = Pt(32)
@@ -77,7 +78,7 @@ class LyricsSlideshow:
         return header_shape  # Return the shape for testing
 
     def _add_text_box(self, slide, text: str, left: float, top: float, width: float, height: float,
-                      font_size: int, alignment=PP_ALIGN.CENTER, is_title=False,
+                      font_size: int, alignment=PP_ALIGN.CENTER, font_type="Helvetica",
                       is_chorus=False, is_header=False):
         """
         Creates a formatted text box on the slide with specified parameters.
@@ -122,7 +123,7 @@ class LyricsSlideshow:
         # Format first paragraph
         font = first_paragraph.font
         font.size = font_size
-        font.name = self.TITLE_FONT if is_title else self.BODY_FONT
+        font.name = font_type
         font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
         if is_chorus:
             font.italic = True
@@ -137,7 +138,7 @@ class LyricsSlideshow:
             # Format paragraph
             font = paragraph.font
             font.size = font_size
-            font.name = self.TITLE_FONT if is_title else self.BODY_FONT
+            font.name = font_type
             font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
             if is_chorus:
                 font.italic = True
@@ -187,7 +188,7 @@ class LyricsSlideshow:
             self.WIDTH,
             Inches(2),
             self.TITLE_SIZE,
-            is_title=True
+            font_type=self.TITLE_FONT
         )
 
         for song_number, title, chorus_count, sections in songs:
@@ -213,7 +214,8 @@ class LyricsSlideshow:
                     self.HEADER_HEIGHT - Inches(0.05),
                     self.HEADER_SIZE,
                     alignment=PP_ALIGN.LEFT,
-                    is_header=True
+                    is_header=True,
+                    font_type=self.HEADER_FONT
                 )
 
                 section_type = section["type"].upper()
@@ -232,7 +234,8 @@ class LyricsSlideshow:
                     self.HEADER_HEIGHT - Inches(0.05),
                     self.HEADER_SIZE,
                     alignment=PP_ALIGN.RIGHT,
-                    is_header=True
+                    is_header=True,
+                    font_type=self.HEADER_FONT
                 )
 
                 # Add lyrics content with maximum width
