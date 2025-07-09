@@ -268,7 +268,7 @@ class LyricsSlideshow:
                     f"{song_number}: {title}",
                     self.LEFT_MARGIN,
                     self.TOP_MARGIN,
-                    Inches(6.5),
+                    Inches(10.7),
                     self.HEADER_HEIGHT - Inches(0.05),
                     self.HEADER_SIZE,
                     alignment=PP_ALIGN.LEFT,
