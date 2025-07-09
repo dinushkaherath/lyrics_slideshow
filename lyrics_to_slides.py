@@ -150,7 +150,7 @@ class LyricsSlideshow:
             is_title (bool): Whether this is a title text box
             is_chorus (bool): Whether this is a chorus section
             is_header (bool): Whether this is a header text box
-            
+        
         Returns:
             The created shape object
         """
@@ -221,7 +221,7 @@ class LyricsSlideshow:
         Args:
             songs (List[Song]): List of parsed song dictionaries
             output_file (str): Desired output filename
-            
+        
         Returns:
             str: Path to the created presentation file
         """
@@ -236,13 +236,13 @@ class LyricsSlideshow:
 
         # Add main title
         self._add_text_box(
-            title_slide,
-            "Song Lyrics Slideshow",
-            self.LEFT_MARGIN,
-            Inches(3),
-            self.WIDTH,
-            Inches(2),
-            self.TITLE_SIZE,
+            slide=title_slide,
+            text="Song Lyrics Slideshow",
+            left=self.LEFT_MARGIN,
+            top=Inches(3),
+            width=self.WIDTH,
+            height=Inches(2),
+            font_size=self.TITLE_SIZE,
             font_type=self.TITLE_FONT
         )
 
@@ -264,13 +264,13 @@ class LyricsSlideshow:
 
                 # Add song number and title (top left)
                 self._add_text_box(
-                    slide,
-                    f"{song_number}: {title}",
-                    self.LEFT_MARGIN,
-                    self.TOP_MARGIN,
-                    Inches(10.7),
-                    self.HEADER_HEIGHT - Inches(0.05),
-                    self.HEADER_SIZE,
+                    slide=slide,
+                    text=f"{song_number}: {title}",
+                    left=self.LEFT_MARGIN,
+                    top=self.BOTTOM_MARGIN,
+                    width=Inches(10.7),
+                    height=self.HEADER_HEIGHT - Inches(0.05),
+                    font_size=self.HEADER_SIZE,
                     alignment=PP_ALIGN.LEFT,
                     is_header=True,
                     font_type=self.HEADER_FONT
@@ -284,13 +284,13 @@ class LyricsSlideshow:
                 )
 
                 self._add_text_box(
-                    slide,
-                    section_label,
-                    Inches(10),
-                    self.TOP_MARGIN,
-                    Inches(2.5),
-                    self.HEADER_HEIGHT - Inches(0.05),
-                    self.HEADER_SIZE,
+                    slide=slide,
+                    text=section_label,
+                    left=Inches(10),
+                    top=self.BOTTOM_MARGIN,
+                    width=Inches(2.5),
+                    height=self.HEADER_HEIGHT - Inches(0.05),
+                    font_size=self.HEADER_SIZE,
                     alignment=PP_ALIGN.RIGHT,
                     is_header=True,
                     font_type=self.HEADER_FONT
@@ -300,13 +300,13 @@ class LyricsSlideshow:
 
                 # Add lyrics content with maximum width
                 self._add_text_box(
-                    slide,
-                    section['content'],
-                    self.LEFT_MARGIN,
-                    self.LYRICS_TOP,
-                    self.WIDTH,
-                    self.LYRICS_HEIGHT,
-                    self.STANZA_SIZE if section['type'] == 'stanza' else self.CHORUS_SIZE,
+                    slide=slide,
+                    text=section['content'],
+                    left=self.LEFT_MARGIN,
+                    top=self.LYRICS_TOP,
+                    width=self.WIDTH,
+                    height=self.LYRICS_HEIGHT,
+                    font_size=self.STANZA_SIZE if section['type'] == 'stanza' else self.CHORUS_SIZE,
                     is_chorus=(section['type'] == 'chorus')
                 )
 
