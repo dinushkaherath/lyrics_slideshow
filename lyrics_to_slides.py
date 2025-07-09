@@ -59,6 +59,8 @@ class LyricsSlideshow:
         # Helper
         self.song_title_to_slide = {}
 
+        self.song_list_slide = None
+
     def _calculate_dynamic_font_size(self, text: str, is_chorus: bool = False) -> Pt:
         """
         Dynamically calculates font size based on actual text wrapping.
@@ -76,6 +78,29 @@ class LyricsSlideshow:
         scale = min(1.0, max_display_lines / max(estimated_line_count, 1))
         size = int(base_size * scale)
         return Pt(max(size, min_size))
+
+    def _add_home_icon(self, slide, target_slide, icon_path="assets/home.png"):
+        """
+        Adds a clickable home PNG icon in the top-right corner that links to the target_slide.
+
+        Args:
+            slide: The slide to add the icon to.
+            target_slide: The slide to link back to (song list).
+            icon_path: Path to the PNG file to use as the icon.
+        """
+        icon_width = Inches(0.4)
+        icon_height = Inches(0.4)
+
+        # Position at the far right, with a small margin
+        left = self.prs.slide_width - icon_width - Inches(0.2)
+        top = Inches(0.05)
+
+        # Insert the image
+        try:
+            icon = slide.shapes.add_picture(icon_path, left, top, width=icon_width, height=icon_height)
+            icon.click_action.target_slide = target_slide
+        except Exception as e:
+            print(f"Error adding home icon: {e}")
 
 
     def _add_header_background(self, slide):
@@ -274,6 +299,8 @@ class LyricsSlideshow:
                     font_type=self.HEADER_FONT
                 )
 
+                self._add_home_icon(slide, self.song_list_slide)
+
                 # Add lyrics content with maximum width
                 self._add_text_box(
                     slide,
@@ -352,3 +379,4 @@ class LyricsSlideshow:
             run.font.size = Pt(14)  # Smaller font
             run.font.name = self.BODY_FONT
             run.font.color.rgb = self.TEXT_COLOR
+        self.song_list_slide = slide
