@@ -18,6 +18,7 @@ SIZE = {
     "header": Pt(24),
     "stanza": Pt(44),
     "chorus": Pt(44),
+    "song_list": Pt(14),
 }
 
 COLOR = {
@@ -28,15 +29,28 @@ COLOR = {
 }
 
 POSITION = {
+    # Slide dimensions
     "slide_width": Inches(13.333),
     "slide_height": Inches(7.5),
+
+    # Margins
     "left_margin": Inches(0.3),
     "right_margin": Inches(9.7),
     "bottom_margin": Inches(7),
-    "width": Inches(12.7),
-    "header_height": Inches(0.4),
+
+    # Lyrics text box
     "lyrics_top": Inches(0),
     "lyrics_height": Inches(5),
+    "lyrics_width": Inches(12.7),
+
+    # Header
+    "header_height": Inches(0.4),
+    "header_width_left": Inches(10.7),
+    "header_width_right": Inches(2.5),
+    "header_left": Inches(10),
+    "header_top": Inches(7),
+    "title_top": Inches(3),
+    "title_height": Inches(2),
 }
 
 ICON_SIZES = {
@@ -45,10 +59,23 @@ ICON_SIZES = {
 }
 
 ICON_POSITIONS = {
-    "home": (POSITION["slide_width"] - Inches(0.4) - Inches(0.2), POSITION["bottom_margin"]),
+    "home": (
+        POSITION["slide_width"] - ICON_SIZES["home"][0] - Inches(0.2),
+        POSITION["bottom_margin"]
+    ),
     "restart": (Inches(12.06), Inches(6)),
 }
 
+GRID = {
+    # Song list layout
+    "columns": 3,
+    "box_width": Inches(4.45),
+    "box_height": Inches(0.5),
+    "spacing_x": Inches(0),
+    "spacing_y": Inches(0),
+    "start_left": Inches(0),
+    "start_top": Inches(0),
+}
 
 class LyricsSlideshow:
     def __init__(self) -> None:
@@ -176,9 +203,9 @@ class LyricsSlideshow:
             slide=title_slide,
             text="Song Lyrics Slideshow",
             left=POSITION["left_margin"],
-            top=Inches(3),
-            width=POSITION["width"],
-            height=Inches(2),
+            top=POSITION["title_top"],
+            width=POSITION["slide_width"],
+            height=POSITION["title_height"],
             font_size=SIZE["title"],
             font_type=FONT["title"]
         )
@@ -207,7 +234,7 @@ class LyricsSlideshow:
                     text=f"{song_number}: {title}",
                     left=POSITION["left_margin"],
                     top=POSITION["bottom_margin"],
-                    width=Inches(10.7),
+                    width=POSITION["header_width_left"],
                     height=POSITION["header_height"],
                     font_size=SIZE["header"],
                     horizontal_alignment=PP_ALIGN.LEFT,
@@ -225,9 +252,9 @@ class LyricsSlideshow:
                 self._add_text_box(
                     slide=slide,
                     text=section_label,
-                    left=Inches(10),
+                    left=POSITION["header_left"],
                     top=POSITION["bottom_margin"],
-                    width=Inches(2.5),
+                    width=POSITION["header_width_right"],
                     height=POSITION["header_height"],
                     font_size=SIZE["header"],
                     horizontal_alignment=PP_ALIGN.RIGHT,
@@ -245,7 +272,7 @@ class LyricsSlideshow:
                     text=section['content'],
                     left=POSITION["left_margin"],
                     top=POSITION["lyrics_top"],
-                    width=POSITION["width"],
+                    width=POSITION["lyrics_width"],
                     height=POSITION["lyrics_height"],
                     font_size=SIZE["stanza"] if section['type'] == 'stanza' else SIZE["chorus"],
                     vertical_alignment=MSO_VERTICAL_ANCHOR.TOP,
@@ -280,13 +307,13 @@ class LyricsSlideshow:
         slide.background.fill.fore_color.rgb = COLOR["header_bg"]
 
         # Grid configuration
-        num_columns = 3
-        box_width = Inches(4.45)
-        box_height = Inches(0.5)
-        spacing_x = Inches(0)
-        spacing_y = Inches(0)
-        left_start = Inches(0)
-        top_start = Inches(0)
+        num_columns = GRID["columns"]
+        box_width = GRID["box_width"]
+        box_height = GRID["box_height"]
+        spacing_x = GRID["spacing_x"]
+        spacing_y = GRID["spacing_y"]
+        left_start = GRID["start_left"]
+        top_start = GRID["start_top"]
 
         for index, title in enumerate(song_titles):
             col = index % num_columns
