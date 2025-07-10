@@ -187,6 +187,26 @@ class LyricsSlideshow:
 
         return shape
 
+    def _estimate_wrapped_lines(self, text: str, box_width_inches: float, font_size_pt: float) -> int:
+        """
+        bruh
+        """
+        char_width_factor = 0.55  # Empirical average character width factor
+        avg_char_width_inches = (font_size_pt / 72.0) * char_width_factor # in points, where 1pt = 1/72 inch
+
+        if avg_char_width_inches == 0:
+            return 1
+
+        chars_per_line = box_width_inches / avg_char_width_inches
+        lines = text.split('\n')
+
+        estimated_lines = 0
+        for line in lines:
+            est_line_count = max(1, int(len(line) / chars_per_line) + 1)
+            estimated_lines += est_line_count
+
+        return estimated_lines
+
     def create_presentation_from_parsed_sections(
         self,
         songs: List[Tuple[int, str, int, List[Dict]]],
@@ -282,14 +302,12 @@ class LyricsSlideshow:
                         is_chorus=(section["type"] == "chorus")
                     )
 
-                    # Only on last chunk of last section
-                    if chunk_index == len(chunks) - 1 and slide_index == len(sections) - 1:
-                        self._add_icon(slide, target_slide=song_slide_map[index], icon_path="assets/restart.png", icon_type="restart")
-
                 # Debug: Print slides with more than 9 lines
-                line_count = section['content'].count('\n') + 1
-                if line_count > 8:
-                    print(f"Slide {len(self.prs.slides)}: {line_count} lines")
+                font_size = SIZE["stanza"] if section['type'] == 'stanza' else SIZE["chorus"]
+                wrapped_line_count = self._estimate_wrapped_lines(section['content'], POSITION["lyrics_width"], font_size.pt)
+
+                if wrapped_line_count > 9:
+                    print(f"[⚠️ Long Slide] Song {song_number}, slide {len(self.prs.slides)} has {wrapped_line_count} wrapped lines")
 
                 # Add restart icon on last slide of song, linking to first slide of that song
                 if slide_index == len(sections) - 1:
