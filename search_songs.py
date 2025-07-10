@@ -134,7 +134,7 @@ def search_songs(song_json_path, targets_txt_path):
 # New function: get all lyrics in order and cleaned
 # -------------------------
 
-def get_cleaned_lyrics_tuples(result):
+def compile_lyrics_tuples(result, repeat_choruses=True):
     combined = []
     for category in ("exact_matches_hymn", "exact_matches_title", "fuzzy_matches"):
         combined.extend(result[category])
@@ -147,8 +147,21 @@ def get_cleaned_lyrics_tuples(result):
         lyrics_raw = item["lyrics"]
         lyrics_chosen = choose_lyrics_version(title, lyrics_raw)
         lyrics = clean_lyrics(lyrics_chosen)
-        choruses, parsed_lyrics = parse_lyrics_sections(lyrics)
-        output.append((line_number, title, choruses, parsed_lyrics))
+        num_choruses, parsed_lyrics = parse_lyrics_sections(lyrics)
+        lyrics_with_repeated_chorus = []
+        if repeat_choruses and num_choruses == 1:
+            chorus_section = None
+            for section in parsed_lyrics:
+                lyrics_with_repeated_chorus.append(section)
+                if section["type"] == "chorus":
+                    chorus_section = section
+                elif section["type"] == "stanza" and chorus_section:
+                    lyrics_with_repeated_chorus.append(chorus_section)
+            output.append((line_number, title, num_choruses, lyrics_with_repeated_chorus))
+        else:
+            output.append((line_number, title, num_choruses, parsed_lyrics))
+        if num_choruses > 1:
+            print(f'Song {title} has {num_choruses} choruses!')
 
     return output
 
