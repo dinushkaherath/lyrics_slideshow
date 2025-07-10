@@ -272,13 +272,16 @@ class LyricsSlideshow:
         )
 
         song_titles = [song[1] for song in songs]
-        song_list_slide = self._add_song_list_slide(song_titles)
 
-        for song_number, title, chorus_count, sections in songs:
+        # ====== Pass 1: Create all song slides ======
+        song_slide_map = {}  # song index → first slide of that song
+
+        for index, (song_number, title, chorus_count, sections) in enumerate(songs):
             for slide_index, section in enumerate(sections):
                 slide = self.prs.slides.add_slide(self.blank_layout)
+
                 if slide_index == 0:
-                    first_slide = slide
+                    song_slide_map[index] = slide
 
                 # Set background color
                 slide.background.fill.solid()
@@ -321,9 +324,9 @@ class LyricsSlideshow:
                     font_type=FONT["header"]
                 )
 
-                self._add_home_icon(slide, song_list_slide)
+                self._add_home_icon(slide, None)
 
-                # Add lyrics content with maximum width
+                # Add lyrics content
                 self._add_text_box(
                     slide=slide,
                     text=section['content'],
@@ -335,19 +338,25 @@ class LyricsSlideshow:
                     is_chorus=(section['type'] == 'chorus')
                 )
 
-                if slide_index == len(sections) - 1:  # Last slide of the song
-                    self._add_restart_song_icon(slide, first_slide)
+                # Add restart song icon on last slide of song
+                if slide_index == len(sections) - 1:
+                    self._add_restart_song_icon(slide, song_slide_map[index])
+
+        # ====== Pass 2: Add song list slide ======
+        song_list_slide = self._add_song_list_slide(song_titles, song_slide_map)
+
+        # ====== Pass 3: Patch home icons to point to song list slide ======
+        for slide in self.prs.slides:
+            for shape in slide.shapes:
+                if hasattr(shape, "click_action"):
+                    if getattr(shape.click_action, "target_slide", None) is None:
+                        shape.click_action.target_slide = song_list_slide
 
         # Save the presentation
         self.prs.save(output_file)
         return output_file
 
-    def _add_song_list_slide(self, song_titles: List[str]):
-        """
-        Adds a clean grid-style slide listing all song titles, each inside a
-        bordered rectangle with small font and no extra text boxes.
-        Matches the provided visual style precisely.
-        """
+    def _add_song_list_slide(self, song_titles: List[str], song_slide_map: Dict[int, 'Slide']):
         slide = self.prs.slides.add_slide(self.blank_layout)
 
         # Set background color
@@ -395,5 +404,11 @@ class LyricsSlideshow:
             run.font.size = Pt(14)  # Smaller font
             run.font.name = FONT["body"]
             run.font.color.rgb = COLOR["text"]
+
+            # Make each box clickable, linking to the corresponding song's first slide
+            try:
+                shape.click_action.target_slide = song_slide_map[slide_index]
+            except Exception as e:
+                print(f"Error linking song list item '{full_title}' to slide: {e}")
 
         return slide
