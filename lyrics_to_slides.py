@@ -8,16 +8,16 @@ from pptx.enum.text import PP_ALIGN, MSO_VERTICAL_ANCHOR
 
 # === Constants === #
 FONT = {
-    "title": "Lora",
-    "body": "Helvetica",
-    "header": "Calibri",
+    "title": "Graphik",
+    "body": "Graphik",
+    "header": "Graphik",
 }
 
 SIZE = {
     "title": Pt(44),
     "header": Pt(24),
-    "stanza": Pt(28),
-    "chorus": Pt(28),
+    "stanza": Pt(44),
+    "chorus": Pt(44),
 }
 
 COLOR = {
@@ -35,7 +35,7 @@ POSITION = {
     "bottom_margin": Inches(7),
     "width": Inches(12.7),
     "header_height": Inches(0.4),
-    "lyrics_top": Inches(0.8),
+    "lyrics_top": Inches(0),
     "lyrics_height": Inches(5),
 }
 
@@ -115,7 +115,8 @@ class LyricsSlideshow:
                       width: float,
                       height: float,
                       font_size: Optional[Pt] = None,
-                      alignment=PP_ALIGN.CENTER,
+                      horizontal_alignment=PP_ALIGN.CENTER,
+                      vertical_alignment=MSO_VERTICAL_ANCHOR.MIDDLE,
                       font_type: str = FONT["body"],
                       is_chorus: bool = False,
                       is_header: bool = False) -> object:
@@ -126,7 +127,7 @@ class LyricsSlideshow:
         text_frame = shape.text_frame
         text_frame.word_wrap = True
         text_frame.auto_size = None  # Let text wrap within the box
-        text_frame.vertical_anchor = MSO_VERTICAL_ANCHOR.MIDDLE
+        text_frame.vertical_anchor = vertical_alignment
 
         # Split text into lines and add each line as a separate paragraph
         lines = text.split('\n')
@@ -145,7 +146,7 @@ class LyricsSlideshow:
         # First paragraph
         first_para = text_frame.paragraphs[0]
         first_para.text = lines[0].upper() if is_header else lines[0]
-        first_para.alignment = alignment
+        first_para.alignment = horizontal_alignment
         first_para.line_spacing = 1.0
         style_font(first_para.runs[0], italic=is_chorus, header=is_header)
 
@@ -153,7 +154,7 @@ class LyricsSlideshow:
         for line in lines[1:]:
             para = text_frame.add_paragraph()
             para.text = line.upper() if is_header else line
-            para.alignment = alignment
+            para.alignment = horizontal_alignment
             para.line_spacing = 1.0
             style_font(para.runs[0], italic=is_chorus, header=is_header)
 
@@ -209,7 +210,7 @@ class LyricsSlideshow:
                     width=Inches(10.7),
                     height=POSITION["header_height"],
                     font_size=SIZE["header"],
-                    alignment=PP_ALIGN.LEFT,
+                    horizontal_alignment=PP_ALIGN.LEFT,
                     is_header=True,
                     font_type=FONT["header"]
                 )
@@ -229,7 +230,7 @@ class LyricsSlideshow:
                     width=Inches(2.5),
                     height=POSITION["header_height"],
                     font_size=SIZE["header"],
-                    alignment=PP_ALIGN.RIGHT,
+                    horizontal_alignment=PP_ALIGN.RIGHT,
                     is_header=True,
                     font_type=FONT["header"]
                 )
@@ -247,6 +248,7 @@ class LyricsSlideshow:
                     width=POSITION["width"],
                     height=POSITION["lyrics_height"],
                     font_size=SIZE["stanza"] if section['type'] == 'stanza' else SIZE["chorus"],
+                    vertical_alignment=MSO_VERTICAL_ANCHOR.TOP,
                     is_chorus=(section['type'] == 'chorus')
                 )
 
