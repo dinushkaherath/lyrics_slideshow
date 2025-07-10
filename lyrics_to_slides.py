@@ -5,6 +5,39 @@ from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN, MSO_VERTICAL_ANCHOR
 
+# === Constants === #
+FONT = {
+    "title": "Lora",
+    "body": "Helvetica",
+    "header": "Calibri",
+}
+
+SIZE = {
+    "title": Pt(44),
+    "header": Pt(24),
+    "stanza": Pt(28),
+    "chorus": Pt(28),
+}
+
+COLOR = {
+    "bg": RGBColor(45, 20, 18),
+    "header_bg": RGBColor(190, 71, 54),
+    "text": RGBColor(244, 243, 237),
+    "header_text": RGBColor(244, 243, 237),
+}
+
+POSITION = {
+    "slide_width": Inches(13.333),
+    "slide_height": Inches(7.5),
+    "left_margin": Inches(0.3),
+    "right_margin": Inches(9.7),
+    "bottom_margin": Inches(7),
+    "width": Inches(12.7),
+    "header_height": Inches(0.4),
+    "lyrics_top": Inches(0.8),
+    "lyrics_height": Inches(5),
+}
+
 
 class LyricsSlideshow:
     def __init__(self):
@@ -25,34 +58,9 @@ class LyricsSlideshow:
         self.prs = Presentation()
 
         # Set slide size to 16:9
-        self.prs.slide_width = Inches(13.333)
-        self.prs.slide_height = Inches(7.5)
-
-        self.blank_layout = self.prs.slide_layouts[6]  # Blank layout instead of Title Only layout
-
-        # Define styles
-        self.TITLE_FONT = "Lora"
-        self.BODY_FONT = "Helvetica"
-        self.HEADER_FONT = "Calibri"
-        self.TITLE_SIZE = Pt(44)  # Main title slide
-        self.HEADER_SIZE = Pt(24)  # Top headers on content slides
-        self.STANZA_SIZE = Pt(28)
-        self.CHORUS_SIZE = Pt(28)
-
-        # Define colors
-        self.BACKGROUND_COLOR = RGBColor(45, 20, 18)
-        self.HEADER_BACKGROUND_COLOR = RGBColor(190, 71, 54)
-        self.TEXT_COLOR = RGBColor(244, 243, 237)
-        self.HEADER_TEXT_COLOR = RGBColor(244, 243, 237)
-
-        # Define positions - Maximizing width by reducing margins
-        self.LEFT_MARGIN = Inches(0.3)  # Reduced from 1
-        self.RIGHT_MARGIN = Inches(9.7)  # Increased from 9
-        self.BOTTOM_MARGIN = Inches(7)
-        self.WIDTH = Inches(12.7)  # Increased from 8 (difference between RIGHT_MARGIN and LEFT_MARGIN)
-        self.HEADER_HEIGHT = Inches(0.4)  # Keep this the same
-        self.LYRICS_TOP = Inches(0.8)  # Keep this the same
-        self.LYRICS_HEIGHT = Inches(5)  # Keep this the same
+        self.prs.slide_width = POSITION["slide_width"]
+        self.prs.slide_height = POSITION["slide_height"]
+        self.blank_layout = self.prs.slide_layouts[6]
 
     def _calculate_dynamic_font_size(self, text: str, is_chorus: bool = False) -> Pt:
         """
@@ -86,7 +94,7 @@ class LyricsSlideshow:
 
         # Position at the far right, with a small margin
         left = self.prs.slide_width - icon_width - Inches(0.2)
-        bottom = Inches(7)
+        bottom = POSITION["bottom_margin"]
 
         # Insert the image
         try:
@@ -135,18 +143,18 @@ class LyricsSlideshow:
         header_shape = slide.shapes.add_shape(
             MSO_SHAPE.RECTANGLE,
             0,  # Left
-            self.BOTTOM_MARGIN,  # Top
-            Inches(13.333),  # Width (full slide width)
-            self.HEADER_HEIGHT + Inches(0.1)  # Height - slightly taller than text for padding
+            POSITION["bottom_margin"],
+            POSITION["slide_width"],
+            POSITION["header_height"] + Inches(0.1)
         )
         fill = header_shape.fill
         fill.solid()
-        fill.fore_color.rgb = self.HEADER_BACKGROUND_COLOR
+        fill.fore_color.rgb = COLOR["header_bg"]
         header_shape.line.fill.background()  # No border
         return header_shape  # Return the shape for testing
 
     def _add_text_box(self, slide, text: str, left: float, top: float, width: float, height: float,
-                      font_size: int, alignment=PP_ALIGN.CENTER, font_type="Helvetica",
+                      font_size: int, alignment=PP_ALIGN.CENTER, font_type=FONT["body"],
                       is_chorus=False, is_header=False):
         """
         Creates a formatted text box on the slide with specified parameters.
@@ -195,9 +203,8 @@ class LyricsSlideshow:
         # Format first paragraph
         font = first_paragraph.font
         font.size = font_size
-
         font.name = font_type
-        font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
+        font.color.rgb = COLOR["header_text"] if is_header else COLOR["text"]
         if is_chorus:
             font.italic = True
 
@@ -212,7 +219,7 @@ class LyricsSlideshow:
             font = paragraph.font
             font.size = font_size
             font.name = font_type
-            font.color.rgb = self.HEADER_TEXT_COLOR if is_header else self.TEXT_COLOR
+            font.color.rgb = COLOR["header_text"] if is_header else COLOR["text"]
             if is_chorus:
                 font.italic = True
 
@@ -249,27 +256,24 @@ class LyricsSlideshow:
         title_slide = self.prs.slides.add_slide(self.blank_layout)
 
         # Set background color for title slide
-        background = title_slide.background
-        fill = background.fill
-        fill.solid()
-        fill.fore_color.rgb = self.BACKGROUND_COLOR
+        title_slide.background.fill.solid()
+        title_slide.background.fill.fore_color.rgb = COLOR["bg"]
 
         # Add main title
         self._add_text_box(
             slide=title_slide,
             text="Song Lyrics Slideshow",
-            left=self.LEFT_MARGIN,
+            left=POSITION["left_margin"],
             top=Inches(3),
-            width=self.WIDTH,
+            width=POSITION["width"],
             height=Inches(2),
-            font_size=self.TITLE_SIZE,
-            font_type=self.TITLE_FONT
+            font_size=SIZE["title"],
+            font_type=FONT["title"]
         )
 
         song_titles = [song[1] for song in songs]
         song_list_slide = self._add_song_list_slide(song_titles)
 
-        first_slide = title_slide
         for song_number, title, chorus_count, sections in songs:
             for slide_index, section in enumerate(sections):
                 slide = self.prs.slides.add_slide(self.blank_layout)
@@ -277,10 +281,8 @@ class LyricsSlideshow:
                     first_slide = slide
 
                 # Set background color
-                background = slide.background
-                fill = background.fill
-                fill.solid()
-                fill.fore_color.rgb = self.BACKGROUND_COLOR
+                slide.background.fill.solid()
+                slide.background.fill.fore_color.rgb = COLOR["bg"]
 
                 # Add header background
                 self._add_header_background(slide)
@@ -289,14 +291,14 @@ class LyricsSlideshow:
                 self._add_text_box(
                     slide=slide,
                     text=f"{song_number}: {title}",
-                    left=self.LEFT_MARGIN,
-                    top=self.BOTTOM_MARGIN,
+                    left=POSITION["left_margin"],
+                    top=POSITION["bottom_margin"],
                     width=Inches(10.7),
-                    height=self.HEADER_HEIGHT - Inches(0.05),
-                    font_size=self.HEADER_SIZE,
+                    height=POSITION["header_height"] - Inches(0.05),
+                    font_size=SIZE["header"],
                     alignment=PP_ALIGN.LEFT,
                     is_header=True,
-                    font_type=self.HEADER_FONT
+                    font_type=FONT["header"]
                 )
 
                 section_type = section["type"].upper()
@@ -310,13 +312,13 @@ class LyricsSlideshow:
                     slide=slide,
                     text=section_label,
                     left=Inches(10),
-                    top=self.BOTTOM_MARGIN,
+                    top=POSITION["bottom_margin"],
                     width=Inches(2.5),
-                    height=self.HEADER_HEIGHT - Inches(0.05),
-                    font_size=self.HEADER_SIZE,
+                    height=POSITION["header_height"] - Inches(0.05),
+                    font_size=SIZE["header"],
                     alignment=PP_ALIGN.RIGHT,
                     is_header=True,
-                    font_type=self.HEADER_FONT
+                    font_type=FONT["header"]
                 )
 
                 self._add_home_icon(slide, song_list_slide)
@@ -325,11 +327,11 @@ class LyricsSlideshow:
                 self._add_text_box(
                     slide=slide,
                     text=section['content'],
-                    left=self.LEFT_MARGIN,
-                    top=self.LYRICS_TOP,
-                    width=self.WIDTH,
-                    height=self.LYRICS_HEIGHT,
-                    font_size=self.STANZA_SIZE if section['type'] == 'stanza' else self.CHORUS_SIZE,
+                    left=POSITION["left_margin"],
+                    top=POSITION["lyrics_top"],
+                    width=POSITION["width"],
+                    height=POSITION["lyrics_height"],
+                    font_size=SIZE["stanza"] if section['type'] == 'stanza' else SIZE["chorus"],
                     is_chorus=(section['type'] == 'chorus')
                 )
 
@@ -350,7 +352,7 @@ class LyricsSlideshow:
 
         # Set background color
         slide.background.fill.solid()
-        slide.background.fill.fore_color.rgb = self.HEADER_BACKGROUND_COLOR
+        slide.background.fill.fore_color.rgb = COLOR["header_bg"]
 
         # Grid configuration
         num_columns = 3
@@ -371,23 +373,14 @@ class LyricsSlideshow:
             top = top_start + row * (box_height + spacing_y)
 
             # Create the rectangle (serves as background + border + text container)
-            shape = slide.shapes.add_shape(
-                MSO_SHAPE.RECTANGLE,
-                left,
-                top,
-                box_width,
-                box_height
-            )
-
+            shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, box_width, box_height)
             # Set fill color
             shape.fill.solid()
-            shape.fill.fore_color.rgb = self.HEADER_BACKGROUND_COLOR
+            shape.fill.fore_color.rgb = COLOR["header_bg"]
 
             # Set border (white thin line)
-            shape.line.color.rgb = self.HEADER_TEXT_COLOR
+            shape.line.color.rgb = COLOR["header_text"]
             shape.line.width = Pt(0.75)
-
-            # shape.click_action.target_slide = target_slide
 
             # Add text directly in shape
             text_frame = shape.text_frame
@@ -400,7 +393,7 @@ class LyricsSlideshow:
             p.alignment = PP_ALIGN.LEFT
             run = p.runs[0]
             run.font.size = Pt(14)  # Smaller font
-            run.font.name = self.BODY_FONT
-            run.font.color.rgb = self.TEXT_COLOR
+            run.font.name = FONT["body"]
+            run.font.color.rgb = COLOR["text"]
 
         return slide
