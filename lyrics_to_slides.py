@@ -46,8 +46,8 @@ POSITION = {
     # Header
     "header_height": Inches(0.4),
     "header_width_left": Inches(10.7),
-    "header_width_right": Inches(2.5),
-    "header_left": Inches(10),
+    "header_width_right": Inches(3),
+    "header_left": Inches(9.5),
     "header_top": Inches(7),
     "title_top": Inches(3),
     "title_height": Inches(2),
@@ -217,67 +217,79 @@ class LyricsSlideshow:
 
         for index, (song_number, title, chorus_count, sections) in enumerate(songs):
             for slide_index, section in enumerate(sections):
-                slide = self.prs.slides.add_slide(self.blank_layout)
-                if slide_index == 0:
-                    song_slide_map[index] = slide
+                lines = section["content"].splitlines()
+                chunks = [lines[i:i+9] for i in range(0, len(lines), 10)]  # max 9 lines per slide
 
-                # Set background color
-                slide.background.fill.solid()
-                slide.background.fill.fore_color.rgb = COLOR["bg"]
+                for chunk_index, chunk in enumerate(chunks):
+                    slide = self.prs.slides.add_slide(self.blank_layout)
+                    if slide_index == 0 and chunk_index == 0:
+                        song_slide_map[index] = slide
 
-                # Add header background
-                self._add_header_background(slide)
+                    # Background & header
+                    slide.background.fill.solid()
+                    slide.background.fill.fore_color.rgb = COLOR["bg"]
+                    self._add_header_background(slide)
 
-                # Header left: song number & title
-                self._add_text_box(
-                    slide=slide,
-                    text=f"{song_number}: {title}",
-                    left=POSITION["left_margin"],
-                    top=POSITION["bottom_margin"],
-                    width=POSITION["header_width_left"],
-                    height=POSITION["header_height"],
-                    font_size=SIZE["header"],
-                    horizontal_alignment=PP_ALIGN.LEFT,
-                    is_header=True,
-                    font_type=FONT["header"]
-                )
+                    # Header left: Song number + title
+                    self._add_text_box(
+                        slide=slide,
+                        text=f"{song_number}: {title}",
+                        left=POSITION["left_margin"],
+                        top=POSITION["bottom_margin"],
+                        width=POSITION["header_width_left"],
+                        height=POSITION["header_height"],
+                        font_size=SIZE["header"],
+                        horizontal_alignment=PP_ALIGN.LEFT,
+                        is_header=True,
+                        font_type=FONT["header"]
+                    )
 
-                # Header right: section label
-                section_type = section["type"].upper()
-                if section_type == "CHORUS":
-                    section_label = f"CHORUS {section['number']}" if chorus_count > 1 else "CHORUS"
-                else:
-                    section_label = f"STANZA {section['number']}"
+                    # Header right: section label
+                    section_type = section["type"].upper()
+                    if section_type == "CHORUS":
+                        section_label = f"CHORUS {section['number']}" if chorus_count > 1 else "CHORUS"
+                    else:
+                        section_label = f"STANZA {section['number']}"
 
-                self._add_text_box(
-                    slide=slide,
-                    text=section_label,
-                    left=POSITION["header_left"],
-                    top=POSITION["bottom_margin"],
-                    width=POSITION["header_width_right"],
-                    height=POSITION["header_height"],
-                    font_size=SIZE["header"],
-                    horizontal_alignment=PP_ALIGN.RIGHT,
-                    is_header=True,
-                    font_type=FONT["header"]
-                )
+                    if len(chunks) > 1:
+                        section_label += f" ({chunk_index + 1}/{len(chunks)})"
 
-                # Home icon links to song list slide (placeholder for now)
-                # We'll patch these links later after song list slide is created
-                self._add_icon(slide, target_slide=None, icon_path="assets/home.png", icon_type="home")
+                    self._add_text_box(
+                        slide=slide,
+                        text=section_label,
+                        left=POSITION["header_left"],
+                        top=POSITION["bottom_margin"],
+                        width=POSITION["header_width_right"],
+                        height=POSITION["header_height"],
+                        font_size=SIZE["header"],
+                        horizontal_alignment=PP_ALIGN.RIGHT,
+                        is_header=True,
+                        font_type=FONT["header"]
+                    )
 
-                # Lyrics text
-                self._add_text_box(
-                    slide=slide,
-                    text=section['content'],
-                    left=POSITION["left_margin"],
-                    top=POSITION["lyrics_top"],
-                    width=POSITION["lyrics_width"],
-                    height=POSITION["lyrics_height"],
-                    font_size=SIZE["stanza"] if section['type'] == 'stanza' else SIZE["chorus"],
-                    vertical_alignment=MSO_VERTICAL_ANCHOR.TOP,
-                    is_chorus=(section['type'] == 'chorus')
-                )
+                    self._add_icon(slide, target_slide=None, icon_path="assets/home.png", icon_type="home")
+
+                    # Add lyrics box (chunk joined back to string)
+                    self._add_text_box(
+                        slide=slide,
+                        text="\n".join(chunk),
+                        left=POSITION["left_margin"],
+                        top=POSITION["lyrics_top"],
+                        width=POSITION["lyrics_width"],
+                        height=POSITION["lyrics_height"],
+                        font_size=SIZE["stanza"] if section["type"] == "stanza" else SIZE["chorus"],
+                        vertical_alignment=MSO_VERTICAL_ANCHOR.TOP,
+                        is_chorus=(section["type"] == "chorus")
+                    )
+
+                    # Only on last chunk of last section
+                    if chunk_index == len(chunks) - 1 and slide_index == len(sections) - 1:
+                        self._add_icon(slide, target_slide=song_slide_map[index], icon_path="assets/restart.png", icon_type="restart")
+
+                # Debug: Print slides with more than 9 lines
+                line_count = section['content'].count('\n') + 1
+                if line_count > 8:
+                    print(f"Slide {len(self.prs.slides)}: {line_count} lines")
 
                 # Add restart icon on last slide of song, linking to first slide of that song
                 if slide_index == len(sections) - 1:
