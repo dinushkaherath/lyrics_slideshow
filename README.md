@@ -16,14 +16,16 @@ pip install -r requirements.txt
 
 ## Usage
 
-1. Create a text file named `songs.txt` with your song lyrics. Format requirements:
+1. Create a text file named `target_songs.txt` with your target songs. It will then pull the songs from the `songs.json` file.
+  
+3. If you want to use other songs change/make a file called `songs.json`. Format requirements:
    - Number verses with "1.", "2.", etc. at the start
    - Indent chorus lines with spaces or tabs
    - Separate verses and chorus with blank lines
 
-2. Run the script:
+5. Run the script:
 ```bash
-python lyrics_to_slides.py
+python create_slideshow.py
 ```
 
 3. The script will create a PowerPoint file named `lyrics_slideshow.pptx` in the current directory.
