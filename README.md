@@ -1,6 +1,7 @@
 # Lyrics to Slides Converter
 
 This Python script converts song lyrics into a PowerPoint presentation, with each verse and chorus on separate slides.
+You can also grab all the songbase songs and put them into a file called songs.json
 
 ## Prerequisites
 
@@ -15,20 +16,24 @@ pip install -r requirements.txt
 ```
 
 ## Usage
+0. If you would like for any reason to update the songbase `songs.json` file just run the `songbase-songs.json-updater.py` file.
+```bash
+python songbase-songs.json-updater.py
+```
 
 1. Create a text file named `target_songs.txt` with your target songs. It will then pull the songs from the `songs.json` file.
   
-3. If you want to use other songs change/make a file called `songs.json`. Format requirements:
+2. If you want to use other songs change/make a file called `songs.json`. Format requirements:
    - Number verses with "1.", "2.", etc. at the start
    - Indent chorus lines with spaces or tabs
    - Separate verses and chorus with blank lines
 
-5. Run the script:
+3. Run the script:
 ```bash
 python create_slideshow.py
 ```
 
-3. The script will create a PowerPoint file named `lyrics_slideshow.pptx` in the current directory.
+4. The script will create a PowerPoint file named `lyrics_slideshow.pptx` in the current directory.
 
 ## Features
 
