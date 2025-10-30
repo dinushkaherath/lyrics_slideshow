@@ -4,3 +4,4 @@ __pycache__/
 songs.txt
 .~*
 version_choices.json
+.venv/
