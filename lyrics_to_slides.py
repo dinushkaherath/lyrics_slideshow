@@ -210,6 +210,7 @@ class LyricsSlideshow:
     def create_presentation_from_parsed_sections(
         self,
         songs: List[Tuple[int, str, int, List[Dict]]],
+        alpha_order: List[Tuple[int, str]],
         output_file: str = "lyrics_slideshow.pptx"
     ) -> str:
         """
@@ -313,8 +314,11 @@ class LyricsSlideshow:
                 if slide_index == len(sections) - 1:
                     self._add_icon(slide, target_slide=song_slide_map[index], icon_path="assets/restart.png", icon_type="restart")
 
-        # Song list slide with clickable boxes
-        song_list_slide = self._add_song_list_slide(song_titles, song_slide_map)
+        # Song list slide (normal numeric order)
+        song_list_slide, title_index_map = self._add_song_list_slide(song_titles, song_slide_map)
+
+        # Alphabetical index slide (added right after)
+        alpha_index_slide = self._add_alpha_index_slide(alpha_order, song_slide_map, title_index_map)
 
         # Patch home icons to link to song list slide
         for slide in self.prs.slides:
@@ -326,9 +330,10 @@ class LyricsSlideshow:
         self.prs.save(output_file)
         return output_file
 
-    def _add_song_list_slide(self, song_titles: List[str], song_slide_map: Dict[int, object]) -> object:
+    def _add_song_list_slide(self, song_titles: List[str], song_slide_map: Dict[int, object]) -> Tuple[object, Dict[str, int]]:
         """
         Creates a slide listing all songs with clickable boxes linking to each song's first slide.
+        Returns a mapping of title -> slide index for later reference.
         """
         slide = self.prs.slides.add_slide(self.blank_layout)
 
@@ -345,11 +350,16 @@ class LyricsSlideshow:
         left_start = GRID["start_left"]
         top_start = GRID["start_top"]
 
+        title_index_map = {}
+
         for index, title in enumerate(song_titles):
             col = index % num_columns
             row = index // num_columns
             number = index + 1
-            full_title = f"{number} – {title}"
+
+            # Add a leading space for single-digit numbers
+            num_str = f"{number:2}"  # width of 2 ensures alignment for 1–9, 10+
+            full_title = f"{num_str} – {title}"
 
             left = left_start + col * (box_width + spacing_x)
             top = top_start + row * (box_height + spacing_y)
@@ -377,9 +387,81 @@ class LyricsSlideshow:
             run.font.name = FONT["body"]
             run.font.color.rgb = COLOR["text"]
 
+            # Link to song slide
             try:
                 shape.click_action.target_slide = song_slide_map[index]
             except Exception as e:
                 print(f"Error linking '{full_title}' to slide: {e}")
+
+            # Store mapping
+            title_index_map[title.strip().lower()] = index
+
+        return slide, title_index_map
+
+    def _add_alpha_index_slide(
+        self,
+        alpha_order: List[Tuple[int, str]],
+        song_slide_map: Dict[int, object],
+        title_index_map: Dict[str, int]
+    ) -> object:
+        """
+        Creates an alphabetically ordered index slide with clickable links to each song.
+        Uses the same slide indices from _add_song_list_slide via title_index_map.
+        """
+        slide = self.prs.slides.add_slide(self.blank_layout)
+
+        # Background styling
+        slide.background.fill.solid()
+        slide.background.fill.fore_color.rgb = COLOR["header_bg"]
+
+        # Grid setup
+        num_columns = GRID["columns"]
+        box_width = GRID["box_width"]
+        box_height = GRID["box_height"]
+        spacing_x = GRID["spacing_x"]
+        spacing_y = GRID["spacing_y"]
+        left_start = GRID["start_left"]
+        top_start = GRID["start_top"]
+
+        for index, (song_number, title) in enumerate(alpha_order):
+            col = index % num_columns
+            row = index // num_columns
+            
+            # Add a leading space for single-digit numbers
+            num_str = f"{song_number:2}"  # width of 2 ensures alignment for 1–9, 10+
+            full_title = f"{num_str} – {title}"
+
+            left = left_start + col * (box_width + spacing_x)
+            top = top_start + row * (box_height + spacing_y)
+
+            # Create text box background
+            shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, box_width, box_height)
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = COLOR["header_bg"]
+            shape.line.color.rgb = COLOR["header_text"]
+            shape.line.width = Pt(0.75)
+
+            # Text formatting
+            text_frame = shape.text_frame
+            text_frame.text = full_title
+            text_frame.vertical_anchor = MSO_VERTICAL_ANCHOR.MIDDLE
+            text_frame.word_wrap = True
+            p = text_frame.paragraphs[0]
+            p.alignment = PP_ALIGN.LEFT
+            run = p.runs[0]
+            run.font.size = Pt(14)
+            run.font.name = FONT["body"]
+            run.font.color.rgb = COLOR["text"]
+
+            # Use title_index_map to find correct slide index
+            key = title.strip().lower()
+            if key in title_index_map:
+                song_index = title_index_map[key]
+                try:
+                    shape.click_action.target_slide = song_slide_map[song_index]
+                except Exception as e:
+                    print(f"Error linking '{full_title}' in alpha index: {e}")
+            else:
+                print(f"Warning: No matching index found for '{full_title}'")
 
         return slide
