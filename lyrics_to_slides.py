@@ -330,10 +330,10 @@ class LyricsSlideshow:
         self.prs.save(output_file)
         return output_file
 
-    def _add_song_list_slide(self, song_titles: List[str], song_slide_map: Dict[int, object]) -> Tuple[object, Dict[str, int]]:
+    def _add_song_list_slide(self, song_titles: List[str], song_slide_map: Dict[int, object]) -> Tuple[object, Dict[int, int]]:
         """
         Creates a slide listing all songs with clickable boxes linking to each song's first slide.
-        Returns a mapping of title -> slide index for later reference.
+        Returns a mapping of song_number -> slide index for later reference.
         """
         slide = self.prs.slides.add_slide(self.blank_layout)
 
@@ -350,15 +350,15 @@ class LyricsSlideshow:
         left_start = GRID["start_left"]
         top_start = GRID["start_top"]
 
-        title_index_map = {}
+        number_index_map = {}
 
         for index, title in enumerate(song_titles):
             col = index % num_columns
             row = index // num_columns
-            number = index + 1
+            song_number = index + 1
 
             # Add a leading space for single-digit numbers
-            num_str = f"{number:2}"  # width of 2 ensures alignment for 1–9, 10+
+            num_str = f"{song_number:2}"  # Ensures alignment for 1–9, 10+
             full_title = f"{num_str} – {title}"
 
             left = left_start + col * (box_width + spacing_x)
@@ -373,7 +373,7 @@ class LyricsSlideshow:
             shape.line.color.rgb = COLOR["header_text"]
             shape.line.width = Pt(0.75)
 
-            # Add text directly in shape
+            # Text styling
             text_frame = shape.text_frame
             text_frame.text = full_title
             text_frame.vertical_anchor = MSO_VERTICAL_ANCHOR.MIDDLE
@@ -387,26 +387,26 @@ class LyricsSlideshow:
             run.font.name = FONT["body"]
             run.font.color.rgb = COLOR["text"]
 
-            # Link to song slide
+            # Link to the correct song’s first slide
             try:
                 shape.click_action.target_slide = song_slide_map[index]
             except Exception as e:
                 print(f"Error linking '{full_title}' to slide: {e}")
 
-            # Store mapping
-            title_index_map[title.strip().lower()] = index
+            # Store mapping of song_number → index
+            number_index_map[song_number] = index
 
-        return slide, title_index_map
+        return slide, number_index_map
 
     def _add_alpha_index_slide(
         self,
         alpha_order: List[Tuple[int, str]],
         song_slide_map: Dict[int, object],
-        title_index_map: Dict[str, int]
+        number_index_map: Dict[int, int]
     ) -> object:
         """
         Creates an alphabetically ordered index slide with clickable links to each song.
-        Uses the same slide indices from _add_song_list_slide via title_index_map.
+        Uses song_number-based matching for linking.
         """
         slide = self.prs.slides.add_slide(self.blank_layout)
 
@@ -453,15 +453,14 @@ class LyricsSlideshow:
             run.font.name = FONT["body"]
             run.font.color.rgb = COLOR["text"]
 
-            # Use title_index_map to find correct slide index
-            key = title.strip().lower()
-            if key in title_index_map:
-                song_index = title_index_map[key]
+            # Match by song number
+            if song_number in number_index_map:
+                song_index = number_index_map[song_number]
                 try:
                     shape.click_action.target_slide = song_slide_map[song_index]
                 except Exception as e:
                     print(f"Error linking '{full_title}' in alpha index: {e}")
             else:
-                print(f"Warning: No matching index found for '{full_title}'")
+                print(f"Warning: No match for song number {song_number} ({title})")
 
         return slide
