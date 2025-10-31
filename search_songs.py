@@ -53,6 +53,7 @@ def search_songs(song_json_path, targets_txt_path):
         song_id_map = {song["id"]: song for song in songs}
 
     parsed_targets = load_target_songs(targets_txt_path)
+    matched_song_ids = set()  # Keep track of songs already matched
 
     exact_matches_hymn = []
     exact_matches_title = []
@@ -63,22 +64,26 @@ def search_songs(song_json_path, targets_txt_path):
         # 1. Hymn number match
         if target["hymn_number"] and target["hymn_number"] in hymn_map:
             song_id = hymn_map[target["hymn_number"]]
-            song = song_id_map.get(song_id)
-            if song:
-                exact_matches_hymn.append({
-                    "line_number": target["line_number"],
-                    "original": target["original"],
-                    "match_type": "exact match by hymn number",
-                    "song_id": song["id"],
-                    "title": song["title"],
-                    "lyrics": song["lyrics"],
-                })
-                continue
+            if song_id not in matched_song_ids:
+                song = song_id_map.get(song_id)
+                if song:
+                    exact_matches_hymn.append({
+                        "line_number": target["line_number"],
+                        "original": target["original"],
+                        "match_type": "exact match by hymn number",
+                        "song_id": song["id"],
+                        "title": song["title"],
+                        "lyrics": song["lyrics"],
+                    })
+                    matched_song_ids.add(song_id)
+                    continue
 
         # 2. Title or lyrics match
         normalized_target = normalize(target["title"])
         found = False
         for song in songs:
+            if song["id"] in matched_song_ids:
+                continue  # skip already matched songs
             title_norm = normalize(song.get("title", ""))
             lyrics_norm = normalize(song.get("lyrics", ""))
             first_line_norm = normalize(song.get("lyrics", "").split("\n", 1)[0])
@@ -94,6 +99,7 @@ def search_songs(song_json_path, targets_txt_path):
                     "title": song["title"],
                     "lyrics": song["lyrics"],
                 })
+                matched_song_ids.add(song["id"])
                 found = True
                 break
 
@@ -107,7 +113,7 @@ def search_songs(song_json_path, targets_txt_path):
                     best_match = song
                     best_score = score
 
-            if best_score >= 0.85:
+            if best_score >= 0.80:
                 fuzzy_matches.append({
                     "line_number": target["line_number"],
                     "original": target["original"],
@@ -116,6 +122,7 @@ def search_songs(song_json_path, targets_txt_path):
                     "title": best_match["title"],
                     "lyrics": best_match["lyrics"],
                 })
+                matched_song_ids.add(best_match["id"])
             else:
                 failures.append({
                     "line_number": target["line_number"],
