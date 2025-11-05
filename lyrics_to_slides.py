@@ -8,10 +8,12 @@ from pptx.enum.text import PP_ALIGN, MSO_VERTICAL_ANCHOR
 
 # === Constants === #
 FONT = {
-    "title": "Graphik",
-    "body": "Graphik",
-    "header": "Graphik",
+    "title": input("What font would you like for the title slides?") or "Grathik",
+    "body": input("What font would you like for the body (song lyric) slides?") or "Corbel",
+    "header": input("What font would you like for the header (small things on bottom) slides?") or "Calibri",
 }
+
+backheadfil = input("Would you like a header background (Do you want the bottom strip to be there)? (y/n) ").lower()
 
 SIZE = {
     "title": Pt(44),
@@ -23,7 +25,7 @@ SIZE = {
 
 COLOR = {
     "bg": RGBColor(45, 20, 18),
-    "header_bg": RGBColor(190, 71, 54),
+    "header_bg": RGBColor.from_string(input("What color bottom strip (Header) do you want? Normal is 'BE4736' please enter hex code without # ") or "BE4736"),
     "text": RGBColor(244, 243, 237),
     "header_text": RGBColor(244, 243, 237),
 }
@@ -103,7 +105,20 @@ class LyricsSlideshow:
         scale = min(1.0, max_lines / max(estimated_lines, 1))
         size = int(base_size * scale)
         return Pt(max(size, min_size))
-
+    """
+    def _set_slide_background_image(self, slide, image_path):
+        
+       #Sets an image as the slide background and sends it to back.
+        
+        pic = slide.shapes.add_picture(
+            image_path,
+            left=0,
+            top=0,
+            width=POSITION["slide_width"],
+            height=POSITION["slide_height"]
+        )
+        pic.z_order = 0
+    """
     def _add_icon(self, slide, target_slide, icon_path: str, icon_type: str) -> None:
         """
         Add a clickable icon to the slide.
@@ -129,9 +144,13 @@ class LyricsSlideshow:
             POSITION["header_height"] + Inches(0.1)
         )
         fill = shape.fill
-        fill.solid()
-        fill.fore_color.rgb = COLOR["header_bg"]
+        if backheadfil == "y":
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = COLOR["header_bg"]
+        else:
+            shape.fill.background()
         shape.line.fill.background()  # No border
+
         return shape
 
     def _add_text_box(self,
