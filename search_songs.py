@@ -16,30 +16,76 @@ def normalize(s):
 def similar(a, b):
     return SequenceMatcher(None, normalize(a), normalize(b)).ratio()
 
-def load_target_songs(filepath):
-    targets = []
-    with open(filepath, "r", encoding="utf-8") as file:
-        for line in file:
-            match = re.match(r"^\s*(\d+)\s+(.*?)\s*$", line)
-            if match:
-                number = int(match.group(1))
-                full_title = match.group(2)
-                base_title = re.sub(r"\s+\(Hymns?,?\s*\d+\)$", "", full_title).strip()
-                hymn_number_match = re.search(r"\(Hymns?,?\s*(\d+)\)", full_title)
-                hymn_number = hymn_number_match.group(1) if hymn_number_match else None
-                targets.append({
-                    "line_number": number,
-                    "original": full_title,
-                    "title": base_title,
-                    "hymn_number": hymn_number
-                })
-    return targets
+def sort_by_line(items):
+    return sorted(items, key=lambda x: x["line_number"])
 
 def build_hymn_number_map(book_songs):
     return {v: int(k) for k, v in book_songs.items()}
 
-def sort_by_line(items):
-    return sorted(items, key=lambda x: x["line_number"])
+# -------------------------
+# Target Songs Loader
+# -------------------------
+
+def load_target_songs(filepath):
+    """
+    Loads target songs file.
+    Handles lines like:
+        512
+        god is good
+    or:
+        512 god is good
+    or:
+        God is Good (Hymn 512)
+    Each line is treated separately.
+    """
+    targets = []
+    with open(filepath, "r", encoding="utf-8") as file:
+        for line_number, line in enumerate(file, start=1):
+            line = line.strip()
+            if not line:
+                continue
+
+            # Case 1: line only digits → hymn number
+            if re.fullmatch(r"\d+", line):
+                targets.append({
+                    "line_number": line_number,
+                    "original": line,
+                    "title": "",
+                    "hymn_number": line
+                })
+                continue
+
+            # Case 2: line with number and title (e.g. "512 God is Good")
+            match_both = re.match(r"^(\d+)\s+(.+)$", line)
+            if match_both:
+                targets.append({
+                    "line_number": line_number,
+                    "original": line,
+                    "title": match_both.group(2).strip(),
+                    "hymn_number": match_both.group(1)
+                })
+                continue
+
+            # Case 3: title with "(Hymn 123)"
+            match_paren = re.match(r"^(.*?)\s*\(Hymns?,?\s*(\d+)\)\s*$", line)
+            if match_paren:
+                targets.append({
+                    "line_number": line_number,
+                    "original": line,
+                    "title": match_paren.group(1).strip(),
+                    "hymn_number": match_paren.group(2)
+                })
+                continue
+
+            # Case 4: just a plain title
+            targets.append({
+                "line_number": line_number,
+                "original": line,
+                "title": line,
+                "hymn_number": ""
+            })
+
+    return targets
 
 # -------------------------
 # Main search function
@@ -78,33 +124,36 @@ def search_songs(song_json_path, targets_txt_path):
                     matched_song_ids.add(song_id)
                     continue
 
-        # 2. Title or lyrics match
-        normalized_target = normalize(target["title"])
-        found = False
-        for song in songs:
-            if song["id"] in matched_song_ids:
-                continue  # skip already matched songs
-            title_norm = normalize(song.get("title", ""))
-            lyrics_norm = normalize(song.get("lyrics", ""))
-            first_line_norm = normalize(song.get("lyrics", "").split("\n", 1)[0])
+        # 2. Title or lyrics match (only if title is not blank)
+        if target["title"]:
+            normalized_target = normalize(target["title"])
+            found = False
+            for song in songs:
+                if song["id"] in matched_song_ids:
+                    continue
+                title_norm = normalize(song.get("title", ""))
+                lyrics_norm = normalize(song.get("lyrics", ""))
+                first_line_norm = normalize(song.get("lyrics", "").split("\n", 1)[0])
 
-            if (normalized_target in title_norm or
-                normalized_target in lyrics_norm or
-                normalized_target in first_line_norm):
-                exact_matches_title.append({
-                    "line_number": target["line_number"],
-                    "original": target["original"],
-                    "match_type": "exact match by title",
-                    "song_id": song["id"],
-                    "title": song["title"],
-                    "lyrics": song["lyrics"],
-                })
-                matched_song_ids.add(song["id"])
-                found = True
-                break
+                if (normalized_target in title_norm or
+                    normalized_target in lyrics_norm or
+                    normalized_target in first_line_norm):
+                    exact_matches_title.append({
+                        "line_number": target["line_number"],
+                        "original": target["original"],
+                        "match_type": "exact match by title",
+                        "song_id": song["id"],
+                        "title": song["title"],
+                        "lyrics": song["lyrics"],
+                    })
+                    matched_song_ids.add(song["id"])
+                    found = True
+                    break
 
-        if not found:
-            # 3. Fuzzy match
+            if found:
+                continue
+
+            # 3. Fuzzy match (only if title not blank)
             best_match = None
             best_score = 0.0
             for song in songs:
@@ -128,6 +177,12 @@ def search_songs(song_json_path, targets_txt_path):
                     "line_number": target["line_number"],
                     "original": target["original"]
                 })
+        else:
+            # blank title and no hymn number match
+            failures.append({
+                "line_number": target["line_number"],
+                "original": target["original"]
+            })
 
     return {
         "total": len(parsed_targets),
@@ -138,7 +193,7 @@ def search_songs(song_json_path, targets_txt_path):
     }
 
 # -------------------------
-# New function: get all lyrics in order and cleaned
+# Lyrics Compilation
 # -------------------------
 
 def compile_lyrics_tuples(result, repeat_choruses=True):
@@ -173,7 +228,7 @@ def compile_lyrics_tuples(result, repeat_choruses=True):
     return output
 
 # -------------------------
-# CLI Demo (Optional)
+# CLI Demo
 # -------------------------
 
 if __name__ == "__main__":
