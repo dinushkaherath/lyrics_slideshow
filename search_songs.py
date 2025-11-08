@@ -124,13 +124,15 @@ def search_songs(song_json_path, targets_txt_path):
                     matched_song_ids.add(song_id)
                     continue
 
-        # 2. Title or lyrics match (only if title is not blank)
+        # 2. Title or lyrics match (collect all potential matches)
         if target["title"]:
             normalized_target = normalize(target["title"])
-            found = False
+            title_matches = []
+
             for song in songs:
                 if song["id"] in matched_song_ids:
                     continue
+
                 title_norm = normalize(song.get("title", ""))
                 lyrics_norm = normalize(song.get("lyrics", ""))
                 first_line_norm = normalize(song.get("lyrics", "").split("\n", 1)[0])
@@ -138,22 +140,39 @@ def search_songs(song_json_path, targets_txt_path):
                 if (normalized_target in title_norm or
                     normalized_target in lyrics_norm or
                     normalized_target in first_line_norm):
-                    exact_matches_title.append({
-                        "line_number": target["line_number"],
-                        "original": target["original"],
-                        "match_type": "exact match by title",
-                        "song_id": song["id"],
-                        "title": song["title"],
-                        "lyrics": song["lyrics"],
-                    })
-                    matched_song_ids.add(song["id"])
-                    found = True
-                    break
+                    title_matches.append(song)
 
-            if found:
+            if len(title_matches) == 1:
+                # ✅ Only one match → keep it
+                song = title_matches[0]
+                exact_matches_title.append({
+                    "line_number": target["line_number"],
+                    "original": target["original"],
+                    "match_type": "exact match by title",
+                    "song_id": song["id"],
+                    "title": song["title"],
+                    "lyrics": song["lyrics"],
+                })
+                matched_song_ids.add(song["id"])
                 continue
 
-            # 3. Fuzzy match (only if title not blank)
+            elif len(title_matches) > 1:
+                # ⚠️ Multiple candidates — let user choose manually later
+                fuzzy_matches.append({
+                    "line_number": target["line_number"],
+                    "original": target["original"],
+                    "match_type": f"multiple title matches ({len(title_matches)})",
+                    "candidates": [
+                        {
+                            "song_id": s["id"],
+                            "title": s["title"],
+                            "lyrics": s["lyrics"][:120].replace("\n", " ") + "..."
+                        } for s in title_matches
+                    ]
+                })
+                continue
+
+            # 3. Fuzzy match fallback
             best_match = None
             best_score = 0.0
             for song in songs:
@@ -178,7 +197,6 @@ def search_songs(song_json_path, targets_txt_path):
                     "original": target["original"]
                 })
         else:
-            # blank title and no hymn number match
             failures.append({
                 "line_number": target["line_number"],
                 "original": target["original"]
@@ -243,8 +261,18 @@ if __name__ == "__main__":
     def print_block(title, emoji, matches):
         print(f"\n{emoji} {title}:\n")
         for m in matches:
+            # Handle candidate-style fuzzy matches safely
+            if "title" not in m:
+                print(f"{m['line_number']:2d}. [{emoji}] '{m['original']}' → ⚠️ multiple candidates ({len(m.get('candidates', []))}) via {m['match_type']}")
+                for c in m.get("candidates", []):
+                    print(f"     ↳ Candidate: '{c['title']}' (ID: {c['song_id']})")
+                print()
+                continue
+
+            # Normal match
             print(f"{m['line_number']:2d}. [{emoji}] '{m['original']}' → '{m['title']}' (ID: {m['song_id']}) via {m['match_type']}")
             print(f"     Lyrics: {m['lyrics'][:100].replace(chr(10), ' ')}...\n")
+
 
     print_block("Exact Matches by Hymn Number", "✅", result["exact_matches_hymn"])
     print_block("Exact Matches by Title/Lyrics", "✅", result["exact_matches_title"])
