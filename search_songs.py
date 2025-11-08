@@ -9,7 +9,7 @@ from lyrics_parser import choose_lyrics_version, clean_lyrics, parse_lyrics_sect
 # -------------------------
 
 def normalize(s):
-    s = unicodedata.normalize('NFKD', s).encode('ascii', 'ignore').decode()
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
     s = re.sub(r"[^\w\s]", "", s)
     return s.lower().strip()
 
@@ -88,7 +88,7 @@ def load_target_songs(filepath):
     return targets
 
 # -------------------------
-# Main search function
+# Main Search
 # -------------------------
 
 def search_songs(song_json_path, targets_txt_path):
@@ -99,7 +99,7 @@ def search_songs(song_json_path, targets_txt_path):
         song_id_map = {song["id"]: song for song in songs}
 
     parsed_targets = load_target_songs(targets_txt_path)
-    matched_song_ids = set()  # Keep track of songs already matched
+    matched_song_ids = set()
 
     exact_matches_hymn = []
     exact_matches_title = []
@@ -107,7 +107,7 @@ def search_songs(song_json_path, targets_txt_path):
     failures = []
 
     for target in parsed_targets:
-        # 1. Hymn number match
+        # Hymn number match
         if target["hymn_number"] and target["hymn_number"] in hymn_map:
             song_id = hymn_map[target["hymn_number"]]
             if song_id not in matched_song_ids:
@@ -124,7 +124,7 @@ def search_songs(song_json_path, targets_txt_path):
                     matched_song_ids.add(song_id)
                     continue
 
-        # 2. Title or lyrics match (collect all potential matches)
+        # Title / lyrics match
         if target["title"]:
             normalized_target = normalize(target["title"])
             title_matches = []
@@ -143,7 +143,6 @@ def search_songs(song_json_path, targets_txt_path):
                     title_matches.append(song)
 
             if len(title_matches) == 1:
-                # ✅ Only one match → keep it
                 song = title_matches[0]
                 exact_matches_title.append({
                     "line_number": target["line_number"],
@@ -157,7 +156,6 @@ def search_songs(song_json_path, targets_txt_path):
                 continue
 
             elif len(title_matches) > 1:
-                # ⚠️ Multiple candidates — let user choose manually later
                 fuzzy_matches.append({
                     "line_number": target["line_number"],
                     "original": target["original"],
@@ -172,7 +170,7 @@ def search_songs(song_json_path, targets_txt_path):
                 })
                 continue
 
-            # 3. Fuzzy match fallback
+            # Fuzzy fallback
             best_match = None
             best_score = 0.0
             for song in songs:
@@ -211,6 +209,50 @@ def search_songs(song_json_path, targets_txt_path):
     }
 
 # -------------------------
+# Interactive Resolution (no skipping)
+# -------------------------
+
+def resolve_fuzzy_matches_and_merge(result):
+    resolved = []
+
+    for match in result["fuzzy_matches"]:
+        # Non-candidate fuzzy match (already resolved)
+        if "candidates" not in match:
+            resolved.append(match)
+            continue
+
+        print(f"\n🔍 Target: {match['original']} ({match['match_type']})\n")
+        for idx, c in enumerate(match["candidates"], 1):
+            print(f"  [{idx}] {c['title']} (ID: {c['song_id']})")
+            print(f"{'-'*50}\n{c['lyrics'][:500]}\n{'-'*50}\n")
+
+        # Force user to pick one (no skipping)
+        while True:
+            try:
+                choice = int(input(f"Select the correct song [1-{len(match['candidates'])}]: "))
+                if 1 <= choice <= len(match["candidates"]):
+                    break
+                print("Invalid number. Try again.")
+            except ValueError:
+                print("Please enter a valid number.")
+
+        chosen_song = match["candidates"][choice - 1]
+        print(f"✅ Selected: {chosen_song['title']}\n")
+
+        resolved.append({
+            "line_number": match["line_number"],
+            "original": match["original"],
+            "match_type": "manual selection",
+            "song_id": chosen_song["song_id"],
+            "title": chosen_song["title"],
+            "lyrics": chosen_song["lyrics"],
+        })
+
+    # Replace fuzzy matches with finalized ones
+    result["fuzzy_matches"] = resolved
+    return result
+
+# -------------------------
 # Lyrics Compilation
 # -------------------------
 
@@ -241,49 +283,51 @@ def compile_lyrics_tuples(result, repeat_choruses=True):
         else:
             output.append((line_number, title, num_choruses, parsed_lyrics))
         if num_choruses > 1:
-            print(f'Song {title} has {num_choruses} choruses!')
+            print(f"⚠️  Song '{title}' has {num_choruses} choruses!")
 
     return output
 
+
+# ------------------------------------------------------
+# 1️⃣ Diagnostic printout
+# ------------------------------------------------------
+
+def summarize(label, symbol, items):
+    count = len(items)
+    percent = (count / result["total"]) * 100 if result["total"] > 0 else 0
+    lines = ", ".join(str(i["line_number"]) for i in items)
+    print(f"{symbol} {label}: {count}/{result['total']} ({percent:.1f}%) → songs: {lines if lines else '—'}")
+
+def print_block(title, emoji, matches):
+    print(f"\n{emoji} {title}:\n")
+    for m in matches:
+        if "title" not in m:
+            # Candidate-style fuzzy matches (should not exist anymore)
+            print(f"{m['line_number']:2d}. [{emoji}] '{m['original']}' → ⚠️ unresolved candidates ({len(m.get('candidates', []))})")
+            continue
+        print(f"{m['line_number']:2d}. [{emoji}] '{m['original']}' → '{m['title']}' (ID: {m['song_id']}) via {m['match_type']}")
+        print(f"     Lyrics: {m['lyrics'][:100].replace(chr(10), ' ')}...\n")
+
 # -------------------------
-# CLI Demo
+# CLI Entry
 # -------------------------
 
 if __name__ == "__main__":
     result = search_songs("songs.json", "target_songs.txt")
 
-    def summarize(label, symbol, items):
-        count = len(items)
-        percent = (count / result["total"]) * 100 if result["total"] > 0 else 0
-        lines = ", ".join(str(i["line_number"]) for i in items)
-        print(f"{symbol} {label}: {count}/{result['total']} ({percent:.1f}%) → songs: {lines if lines else '—'}")
-
-    def print_block(title, emoji, matches):
-        print(f"\n{emoji} {title}:\n")
-        for m in matches:
-            # Handle candidate-style fuzzy matches safely
-            if "title" not in m:
-                print(f"{m['line_number']:2d}. [{emoji}] '{m['original']}' → ⚠️ multiple candidates ({len(m.get('candidates', []))}) via {m['match_type']}")
-                for c in m.get("candidates", []):
-                    print(f"     ↳ Candidate: '{c['title']}' (ID: {c['song_id']})")
-                print()
-                continue
-
-            # Normal match
-            print(f"{m['line_number']:2d}. [{emoji}] '{m['original']}' → '{m['title']}' (ID: {m['song_id']}) via {m['match_type']}")
-            print(f"     Lyrics: {m['lyrics'][:100].replace(chr(10), ' ')}...\n")
-
+    print("\n--- Interactive Fuzzy Match Resolution ---")
+    result = resolve_fuzzy_matches_and_merge(result)
 
     print_block("Exact Matches by Hymn Number", "✅", result["exact_matches_hymn"])
     print_block("Exact Matches by Title/Lyrics", "✅", result["exact_matches_title"])
-    print_block("Fuzzy Matches (review recommended)", "🔍", result["fuzzy_matches"])
+    print_block("Resolved Fuzzy Matches", "🔍", result["fuzzy_matches"])
 
-    print("\n❌ No Matches Found:\n")
-    for f in result["failures"]:
-        print(f"{f['line_number']:2d}. [❌] '{f['original']}' not found")
+    # ------------------------------------------------------
+    # 3️⃣ Summary totals
+    # ------------------------------------------------------
 
     print("\n📊 Summary:\n")
     summarize("Matched by Hymn Number", "✅", result["exact_matches_hymn"])
     summarize("Matched by Title/Lyrics", "✅", result["exact_matches_title"])
-    summarize("Fuzzy Matched", "🔍", result["fuzzy_matches"])
+    summarize("Resolved Fuzzy Matches", "🔍", result["fuzzy_matches"])
     summarize("No Match Found", "❌", result["failures"])

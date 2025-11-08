@@ -1,11 +1,12 @@
 import os
 import platform
 from lyrics_to_slides import LyricsSlideshow
-from search_songs import compile_lyrics_tuples, search_songs
+from search_songs import compile_lyrics_tuples, resolve_fuzzy_matches_and_merge, search_songs
 from alpha_order_songs import alpha_order
 
 def main():
     result = search_songs("songs.json", "target_songs.txt")
+    result = resolve_fuzzy_matches_and_merge(result)
     cleaned_tuples = compile_lyrics_tuples(result)
     song_list = [(num, name) for num, name, *_ in cleaned_tuples]
 
