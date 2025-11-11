@@ -1,4 +1,5 @@
 import json
+import os
 import re
 import unicodedata
 from difflib import SequenceMatcher
@@ -7,6 +8,24 @@ from lyrics_parser import choose_lyrics_version, clean_lyrics, parse_lyrics_sect
 # -------------------------
 # Utils
 # -------------------------
+
+CACHE_FILE = "selected_songs.json"
+
+def load_saved_choices():
+    """Load previously saved song selections from disk."""
+    if not os.path.exists(CACHE_FILE):
+        return {}
+    try:
+        with open(CACHE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def save_saved_choices(cache):
+    """Write updated selections to disk."""
+    with open(CACHE_FILE, "w", encoding="utf-8") as f:
+        json.dump(cache, f, indent=2, ensure_ascii=False)
+
 
 def normalize(s):
     s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
@@ -213,14 +232,35 @@ def search_songs(song_json_path, targets_txt_path):
 # -------------------------
 
 def resolve_fuzzy_matches_and_merge(result):
+    saved_choices = load_saved_choices()
+
     resolved = []
+    cache_updated = False
 
     for match in result["fuzzy_matches"]:
-        # Non-candidate fuzzy match (already resolved)
+        # Skip if this fuzzy match was already automatically resolved
         if "candidates" not in match:
             resolved.append(match)
             continue
 
+        # Try to reuse previous manual choice
+        cache_key = normalize(match["original"])
+        if cache_key in saved_choices:
+            chosen_id = saved_choices[cache_key]
+            candidate = next((c for c in match["candidates"] if c["song_id"] == chosen_id), None)
+            if candidate:
+                print(f"🔁 Reusing saved choice: '{candidate['title']}' for '{match['original']}'")
+                resolved.append({
+                    "line_number": match["line_number"],
+                    "original": match["original"],
+                    "match_type": "cached selection",
+                    "song_id": candidate["song_id"],
+                    "title": candidate["title"],
+                    "lyrics": candidate["lyrics"],
+                })
+                continue
+
+        # Otherwise prompt the user
         print(f"\n🔍 Target: {match['original']} ({match['match_type']})\n")
         for idx, c in enumerate(match["candidates"], 1):
             print(f"  [{idx}] {c['title']} (ID: {c['song_id']})")
@@ -239,6 +279,10 @@ def resolve_fuzzy_matches_and_merge(result):
         chosen_song = match["candidates"][choice - 1]
         print(f"✅ Selected: {chosen_song['title']}\n")
 
+        # Save this choice in cache
+        saved_choices[cache_key] = chosen_song["song_id"]
+        cache_updated = True
+
         resolved.append({
             "line_number": match["line_number"],
             "original": match["original"],
@@ -247,6 +291,11 @@ def resolve_fuzzy_matches_and_merge(result):
             "title": chosen_song["title"],
             "lyrics": chosen_song["lyrics"],
         })
+
+    # Persist any new data
+    if cache_updated:
+        save_saved_choices(saved_choices)
+        print(f"\n💾 Saved {len(saved_choices)} selections to {CACHE_FILE}")
 
     # Replace fuzzy matches with finalized ones
     result["fuzzy_matches"] = resolved
