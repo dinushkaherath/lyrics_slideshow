@@ -35,6 +35,9 @@ python create_slideshow.py
 
 4. The script will create a PowerPoint file named `lyrics_slideshow.pptx` in the current directory.
 
+Want to make it have different font?
+  Answer the questions when you run it!
+  If you dont know, or want default just click enter
 ## Features
 
 - Automatically detects verses and chorus based on formatting
@@ -43,6 +46,7 @@ python create_slideshow.py
 - Differentiates between verses and chorus with styling
 - Works completely offline
 - Creates standard PowerPoint files that can be edited in any presentation software
+- Custom fonts
 
 ## Example Lyrics Format
 

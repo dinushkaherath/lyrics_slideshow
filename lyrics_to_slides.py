@@ -5,28 +5,80 @@ from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN, MSO_VERTICAL_ANCHOR
 
+def configure_defaults():
+    """
+    Presents a menu to edit default presentation settings interactively.
+    The user can review all options, modify specific ones, and confirm when done.
+    """
 
-# === Constants === #
-FONT = {
-    "title": "Graphik",
-    "body": "Graphik",
-    "header": "Graphik",
-}
+    # Default values
+    FONT = {
+        "title": "Grathik",
+        "body": "Grathik",
+        "header": "Grathik",
+    }
 
-SIZE = {
-    "title": Pt(44),
-    "header": Pt(24),
-    "stanza": Pt(44),
-    "chorus": Pt(44),
-    "song_list": Pt(14),
-}
+    SIZE = {
+        "title": 44,
+        "header": 24,
+        "stanza": 44,
+        "chorus": 44,
+        "song_list": 14,
+    }
 
-COLOR = {
-    "bg": RGBColor(45, 20, 18),
-    "header_bg": RGBColor(190, 71, 54),
-    "text": RGBColor(244, 243, 237),
-    "header_text": RGBColor(244, 243, 237),
-}
+    COLOR = {
+        "bg": "2D1412",
+        "header_bg": "BE4736",
+        "text": "FFFFFF",
+        "header_text": "FFFFFF",
+    }
+
+    OPTIONS = {
+        1: ("Fonts", FONT),
+        2: ("Font Sizes", SIZE),
+        3: ("Colors", COLOR),
+        4: ("Header Background Strip", {"enabled": "y"}),
+    }
+
+    def print_options():
+        print("\n=== Configuration Menu ===")
+        for num, (label, values) in OPTIONS.items():
+            print(f"\n[{num}] {label}:")
+            for k, v in values.items():
+                print(f"   {k}: {v}")
+        print("\nPress ENTER to confirm and continue.\n")
+
+    # --- Interactive Loop --- #
+    while True:
+        print_options()
+        choice = input("Enter the number of the section to edit (or ENTER to finish): ").strip()
+
+        if not choice:
+            break
+
+        if not choice.isdigit() or int(choice) not in OPTIONS:
+            print("Invalid choice. Please try again.")
+            continue
+
+        section_name, section_dict = OPTIONS[int(choice)]
+        print(f"\nEditing {section_name}:")
+
+        for key, value in section_dict.items():
+            new_val = input(f"  {key} [{value}]: ").strip()
+            if new_val:
+                section_dict[key] = new_val
+
+    # Convert color strings to RGBColor
+    COLOR = {k: RGBColor.from_string(v) for k, v in COLOR.items()}
+
+    # Rebuild SIZE with Pt
+    from pptx.util import Pt
+    SIZE = {k: Pt(v) for k, v in SIZE.items()}
+
+    backheadfil = OPTIONS[4][1]["enabled"].lower()
+    return FONT, SIZE, COLOR, backheadfil
+
+FONT, SIZE, COLOR, backheadfil = configure_defaults()
 
 POSITION = {
     # Slide dimensions
@@ -103,7 +155,20 @@ class LyricsSlideshow:
         scale = min(1.0, max_lines / max(estimated_lines, 1))
         size = int(base_size * scale)
         return Pt(max(size, min_size))
-
+    """
+    def _set_slide_background_image(self, slide, image_path):
+        
+       #Sets an image as the slide background and sends it to back.
+        
+        pic = slide.shapes.add_picture(
+            image_path,
+            left=0,
+            top=0,
+            width=POSITION["slide_width"],
+            height=POSITION["slide_height"]
+        )
+        pic.z_order = 0
+    """
     def _add_icon(self, slide, target_slide, icon_path: str, icon_type: str) -> None:
         """
         Add a clickable icon to the slide.
@@ -129,9 +194,13 @@ class LyricsSlideshow:
             POSITION["header_height"] + Inches(0.1)
         )
         fill = shape.fill
-        fill.solid()
-        fill.fore_color.rgb = COLOR["header_bg"]
+        if backheadfil == "y":
+            shape.fill.solid()
+            shape.fill.fore_color.rgb = COLOR["header_bg"]
+        else:
+            shape.fill.background()
         shape.line.fill.background()  # No border
+
         return shape
 
     def _add_text_box(self,
