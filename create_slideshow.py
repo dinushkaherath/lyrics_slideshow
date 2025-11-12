@@ -20,7 +20,7 @@ def main():
 
     # Open the file automatically
     if platform.system() == "Windows":
-        os.startfile(full_path)
+        os.startfile(full_path) # type: ignore
     elif platform.system() == "Darwin":  # macOS
         os.system(f"open \"{full_path}\"")
     elif platform.system() == "Linux":

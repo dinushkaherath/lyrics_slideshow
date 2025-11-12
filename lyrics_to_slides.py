@@ -4,6 +4,7 @@ from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
 from pptx.enum.text import PP_ALIGN, MSO_VERTICAL_ANCHOR
+from pptx.slide import Slide
 
 def configure_defaults():
     """
@@ -155,20 +156,7 @@ class LyricsSlideshow:
         scale = min(1.0, max_lines / max(estimated_lines, 1))
         size = int(base_size * scale)
         return Pt(max(size, min_size))
-    """
-    def _set_slide_background_image(self, slide, image_path):
-        
-       #Sets an image as the slide background and sends it to back.
-        
-        pic = slide.shapes.add_picture(
-            image_path,
-            left=0,
-            top=0,
-            width=POSITION["slide_width"],
-            height=POSITION["slide_height"]
-        )
-        pic.z_order = 0
-    """
+
     def _add_icon(self, slide, target_slide, icon_path: str, icon_type: str) -> None:
         """
         Add a clickable icon to the slide.
@@ -399,7 +387,7 @@ class LyricsSlideshow:
         self.prs.save(output_file)
         return output_file
 
-    def _add_song_list_slide(self, song_titles: List[str], song_slide_map: Dict[int, object]) -> Tuple[object, Dict[int, int]]:
+    def _add_song_list_slide(self, song_titles: List[str], song_slide_map: Dict[int, Slide]) -> Tuple[Slide, Dict[int, int]]:
         """
         Creates a slide listing all songs with clickable boxes linking to each song's first slide.
         Returns a mapping of song_number -> slide index for later reference.
@@ -470,9 +458,9 @@ class LyricsSlideshow:
     def _add_alpha_index_slide(
         self,
         alpha_order: List[Tuple[int, str]],
-        song_slide_map: Dict[int, object],
+        song_slide_map: Dict[int, Slide],
         number_index_map: Dict[int, int]
-    ) -> object:
+    ) -> Slide:
         """
         Creates an alphabetically ordered index slide with clickable links to each song.
         Uses song_number-based matching for linking.
