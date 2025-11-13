@@ -166,7 +166,7 @@ def match_targets_to_library(song_json_path, targets_txt_path):
                     "candidates": [
                         {
                             "song_id": s["id"], "title": s["title"],
-                            "lyrics": s["lyrics"][:120].replace("\n", " ") + "..."
+                            "lyrics": s["lyrics"]
                         } for s in title_matches
                     ]
                 })
@@ -237,7 +237,7 @@ def resolve_fuzzy_matches(result):
         print(f"\n🔍 Target: {match['original']} ({match['match_type']})\n")
         for idx, c in enumerate(match["candidates"], 1):
             print(f"  [{idx}] {c['title']} (ID: {c['song_id']})")
-            print(f"{'-'*50}\n{c['lyrics'][:500]}\n{'-'*50}\n")
+            print(f"{'-'*50}\n{c['lyrics'][:120].replace("\n", " ") + "..."}\n{'-'*50}\n")
 
         # The interactive input logic relies on the full lyrics being available for selection
         # and is kept for completeness in a CLI script, even if non-functional in this environment.

@@ -23,7 +23,7 @@ def main():
         print("Starting song processing pipeline...")
         
         # This single line replaces search_songs, resolve_fuzzy_matches_and_merge, and compile_lyrics_tuples
-        match_results, cleaned_tuples = match_and_compile_songs(
+        _, cleaned_tuples = match_and_compile_songs(
             "songs.json", 
             "target_songs.txt"
         )
@@ -32,9 +32,8 @@ def main():
             print("No songs found or processed. Exiting.")
             return
 
-        # Find all songs where there are no section (t[2] is num_choruses)
-        zero_tuples = [t for t in cleaned_tuples if t[2] == 0]
-        
+        # Find all songs where there are no sections
+        zero_tuples = [t for t in cleaned_tuples if len(t[3]) == 0]
 
         if zero_tuples:
             print("Songs that need help:")
