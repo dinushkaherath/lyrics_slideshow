@@ -237,7 +237,8 @@ def resolve_fuzzy_matches(result):
         print(f"\n🔍 Target: {match['original']} ({match['match_type']})\n")
         for idx, c in enumerate(match["candidates"], 1):
             print(f"  [{idx}] {c['title']} (ID: {c['song_id']})")
-            print(f"{'-'*50}\n{c['lyrics'][:120].replace("\n", " ") + "..."}\n{'-'*50}\n")
+            snippet = c['lyrics'][:120].replace("\n", " ") + "..."
+            print(f"{'-'*50}\n{snippet}\n{'-'*50}\n")
 
         # The interactive input logic relies on the full lyrics being available for selection
         # and is kept for completeness in a CLI script, even if non-functional in this environment.
