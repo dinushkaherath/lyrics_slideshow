@@ -9,7 +9,7 @@ from slideshow import LyricsSlideshow
 
 # 2. Import your song parsing functions
 try:
-    from search_songs import match_and_compile_songs
+    from search_songs import compile_lyrics_tuples, search_songs
     from alpha_order_songs import alpha_order
 except ImportError:
     print("ERROR: Could not find 'search_songs.py' or 'alpha_order_songs.py'.")
@@ -20,13 +20,11 @@ except ImportError:
 def main():
     try:
         # 1. Run your song parsing logic
-        print("Starting song processing pipeline...")
-        
-        # This single line replaces search_songs, resolve_fuzzy_matches_and_merge, and compile_lyrics_tuples
-        match_results, cleaned_tuples = match_and_compile_songs(
-            "songs.json", 
-            "target_songs.txt"
-        )
+        print("Searching for songs...")
+        result = search_songs("songs.json", "target_songs.txt")
+        print(result)
+        print("Compiling lyrics...")
+        cleaned_tuples = compile_lyrics_tuples(result)
 
         if not cleaned_tuples:
             print("No songs found or processed. Exiting.")
