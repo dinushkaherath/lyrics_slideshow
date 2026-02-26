@@ -12,7 +12,7 @@ from lyrics_parser import choose_lyrics_version, clean_lyrics, parse_lyrics_sect
 CACHE_FILE = "selected_songs.json"
 
 def load_saved_choices():
-    """Load previously saved song selections (cache) from disk."""
+    """Load the local JSON cache to skip re-asking about previously resolved songs."""
     if not os.path.exists(CACHE_FILE):
         return {}
     try:
@@ -22,28 +22,27 @@ def load_saved_choices():
         return {}
 
 def save_saved_choices(cache):
-    """Write updated selections (cache) to disk."""
+    """Write user selections to disk to persist display titles and song IDs."""
     with open(CACHE_FILE, "w", encoding="utf-8") as f:
         json.dump(cache, f, indent=2, ensure_ascii=False)
 
 
 def normalize(s):
-    """Normalize string for comparison."""
+    """Strip accents, punctuation, and casing to make string comparisons 'fuzzy' and robust."""
     s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
     s = re.sub(r"[^\w\s]", "", s)
     return s.lower().strip()
 
 def similar(a, b):
-    """Calculate similarity ratio between two normalized strings."""
+    """Return a 0.0 to 1.0 score of how similar two strings are (Levenshtein-based)."""
     return SequenceMatcher(None, normalize(a), normalize(b)).ratio()
 
 def sort_by_line(items):
-    """Sort list of dictionaries by 'line_number' key."""
+    """Ensure results appear in the same order they were written in the input file."""
     return sorted(items, key=lambda x: x["line_number"])
 
 def build_hymn_number_map(book_songs):
-    """Build a mapping from hymn number (string) to song ID (int)."""
-    # Assuming book_songs is a dictionary {hymn_number: song_id}
+    """Convert the library's book structure into a fast lookup: { 'HymnNumber': SongID }."""
     return {v: int(k) for k, v in book_songs.items()}
 
 # -------------------------
@@ -51,7 +50,10 @@ def build_hymn_number_map(book_songs):
 # -------------------------
 
 def load_target_songs(filepath):
-    """Loads target songs from a text file and extracts title/hymn number."""
+    """
+    Reads target_songs.txt and uses Regex to identify the song title and hymn number.
+    It handles formats like: '123', '123 Title', 'Title (Hymn 123)', and 'Title 123'.
+    """
     targets = []
     with open(filepath, "r", encoding="utf-8") as file:
         for line_number, line in enumerate(file, start=1):
@@ -59,7 +61,7 @@ def load_target_songs(filepath):
             if not line:
                 continue
 
-            # Case 1: line only digits → hymn number
+            # Case 1: Pure digits (e.g., '1232')
             if re.fullmatch(r"\d+", line):
                 targets.append({
                     "line_number": line_number, "original": line,
@@ -67,7 +69,7 @@ def load_target_songs(filepath):
                 })
                 continue
 
-            # Case 2: line with number and title (e.g. "512 God is Good")
+            # Case 2: Number followed by title (e.g. '1232 Jesus is Getting...')
             match_both = re.match(r"^(\d+)\s+(.+)$", line)
             if match_both:
                 targets.append({
@@ -76,7 +78,7 @@ def load_target_songs(filepath):
                 })
                 continue
 
-            # Case 3: title with "(Hymn 123)"
+            # Case 3: Title followed by hymn in parentheses (e.g. 'Amazing Grace (Hymn 12)')
             match_paren = re.match(r"^(.*?)\s*\(Hymns?,?\s*(\d+)\)\s*$", line)
             if match_paren:
                 targets.append({
@@ -84,8 +86,17 @@ def load_target_songs(filepath):
                     "title": match_paren.group(1).strip(), "hymn_number": match_paren.group(2)
                 })
                 continue
+            
+            # Case 3.5: Title followed by a number at the very end (e.g. 'Praise Him 1232')
+            match_end_num = re.match(r"^(.*?)\s+(\d+)$", line)
+            if match_end_num:
+                targets.append({
+                    "line_number": line_number, "original": line,
+                    "title": match_end_num.group(1).strip(), "hymn_number": match_end_num.group(2)
+                })
+                continue
 
-            # Case 4: just a plain title
+            # Case 4: Pure text title (no hymn number detected)
             targets.append({
                 "line_number": line_number, "original": line,
                 "title": line, "hymn_number": ""
@@ -99,8 +110,10 @@ def load_target_songs(filepath):
 
 def match_targets_to_library(song_json_path, targets_txt_path):
     """
-    Matches input target songs (by hymn number or title/lyrics) against the full song library.
-    Returns results categorized into exact matches, fuzzy matches (candidates), and failures.
+    The 'Search Engine'. Compares input songs against songs.json in 3 stages:
+    1. Direct Hymn Number lookup.
+    2. Substring matching in titles/lyrics.
+    3. Fuzzy score comparison for typos.
     """
     with open(song_json_path, "r", encoding="utf-8") as f:
         full_data = json.load(f)
@@ -110,7 +123,7 @@ def match_targets_to_library(song_json_path, targets_txt_path):
         song_id_map = {song["id"]: song for song in songs}
 
     parsed_targets = load_target_songs(targets_txt_path)
-    matched_song_ids = set()
+    matched_song_ids = set() # Prevent the same song from being picked twice in one run
 
     exact_matches_hymn = []
     exact_matches_title = []
@@ -118,7 +131,7 @@ def match_targets_to_library(song_json_path, targets_txt_path):
     failures = []
 
     for target in parsed_targets:
-        # 1. Hymn number match
+        # STAGE 1: Match by Hymn Number (Highest Confidence)
         if target["hymn_number"] and target["hymn_number"] in hymn_map:
             song_id = hymn_map[target["hymn_number"]]
             if song_id not in matched_song_ids:
@@ -132,7 +145,7 @@ def match_targets_to_library(song_json_path, targets_txt_path):
                     matched_song_ids.add(song_id)
                     continue
 
-        # 2. Title / lyrics match
+        # STAGE 2: Match by Title/Lyrics Substrings
         if target["title"]:
             normalized_target = normalize(target["title"])
             title_matches = []
@@ -149,6 +162,7 @@ def match_targets_to_library(song_json_path, targets_txt_path):
                     normalized_target in first_line_norm):
                     title_matches.append(song)
 
+            # If only one song matches the text, we call it an exact match
             if len(title_matches) == 1:
                 song = title_matches[0]
                 exact_matches_title.append({
@@ -159,20 +173,19 @@ def match_targets_to_library(song_json_path, targets_txt_path):
                 matched_song_ids.add(song["id"])
                 continue
 
+            # If multiple songs match, we save them for Step 2 resolution
             elif len(title_matches) > 1:
                 fuzzy_matches.append({
                     "line_number": target["line_number"], "original": target["original"],
                     "match_type": f"multiple title matches ({len(title_matches)})",
                     "candidates": [
-                        {
-                            "song_id": s["id"], "title": s["title"],
-                            "lyrics": s["lyrics"]
-                        } for s in title_matches
+                        {"song_id": s["id"], "title": s["title"], "lyrics": s["lyrics"]} 
+                        for s in title_matches
                     ]
                 })
                 continue
 
-            # 3. Fuzzy fallback
+            # STAGE 3: Fuzzy Fallback (Typos)
             best_match = None
             best_score = 0.0
             for song in songs:
@@ -182,7 +195,7 @@ def match_targets_to_library(song_json_path, targets_txt_path):
                     best_match = song
                     best_score = score
 
-            if best_score >= 0.80 and best_match and best_match["id"] not in matched_song_ids:
+            if best_score >= 0.80 and best_match:
                 fuzzy_matches.append({
                     "line_number": target["line_number"], "original": target["original"],
                     "match_type": f"fuzzy match ({best_score:.2f})", "song_id": best_match["id"],
@@ -204,79 +217,108 @@ def match_targets_to_library(song_json_path, targets_txt_path):
 
 def resolve_fuzzy_matches(result):
     """
-    Attempts to resolve multi-candidate fuzzy matches using a cache of previous choices.
-    This function contains interactive prompts intended for a CLI environment.
+    The 'Interactive Resolver'.
+    1. Checks if the song was already chosen in a previous run.
+    2. If not, asks the user to pick the correct song from candidates.
+    3. Asks the user how the title should look in the final PowerPoint.
     """
     saved_choices = load_saved_choices()
-
     resolved = []
     cache_updated = False
 
-    for match in result["fuzzy_matches"]:
-        # If already resolved (e.g., by fuzzy score threshold)
-        if "candidates" not in match:
+    all_matches = result["exact_matches_hymn"] + result["exact_matches_title"] + result["fuzzy_matches"]
+
+    for match in all_matches:
+        cache_key = normalize(match["original"])
+        
+        # Check Cache
+        if cache_key in saved_choices:
+            saved = saved_choices[cache_key]
+            match.update({
+                "title": saved["display_title"],
+                "song_id": saved["song_id"],
+                "match_type": "cached selection"
+            })
             resolved.append(match)
             continue
 
-        # Try to reuse previous manual choice
-        cache_key = normalize(match["original"])
-        if cache_key in saved_choices:
-            chosen_id = saved_choices[cache_key]
-            # NOTE: Candidate lyrics are snippets, in a real system you'd fetch full lyrics here
-            candidate = next((c for c in match["candidates"] if c["song_id"] == chosen_id), None)
-            if candidate:
-                print(f"🔁 Reusing saved choice: '{candidate['title']}' for '{match['original']}'")
-                resolved.append({
-                    "line_number": match["line_number"], "original": match["original"],
-                    "match_type": "cached selection", "song_id": candidate["song_id"],
-                    "title": candidate["title"], "lyrics": candidate["lyrics"],
-                })
-                continue
+        print(f"\n🔍 Target: '{match['original']}'")
+        
+        # --- SUB-STEP A: Resolve ID (If multiple choices) ---
+        chosen_song = None
+        candidates = match.get("candidates", [])
 
-        # Otherwise prompt the user (This section is interactive and will halt/fail in non-CLI environments)
-        print(f"\n🔍 Target: {match['original']} ({match['match_type']})\n")
-        for idx, c in enumerate(match["candidates"], 1):
-            print(f"  [{idx}] {c['title']} (ID: {c['song_id']})")
-            snippet = c['lyrics'][:120].replace("\n", " ") + "..."
-            print(f"{'-'*50}\n{snippet}\n{'-'*50}\n")
-
-        # The interactive input logic relies on the full lyrics being available for selection
-        # and is kept for completeness in a CLI script, even if non-functional in this environment.
-        try:
+        if candidates:
+            print(f"Multiple matches found. Please select the correct song:")
+            for idx, c in enumerate(candidates, 1):
+                # Clean lyrics snippet to show user (strip chords/tags)
+                snippet = re.sub(r'\[.*?\]', '', c.get('lyrics', ''))[:80].replace('\n', ' ')
+                print(f"  [{idx}] {c['title']} (ID: {c['song_id']})")
+                print(f"      {snippet}...")
+                print()
+            
             while True:
-                choice = int(input(f"Select the correct song [1-{len(match['candidates'])}]: "))
-                if 1 <= choice <= len(match["candidates"]):
+                c_choice = input(f"Select song [1-{len(candidates)}]: ").strip()
+                if c_choice.isdigit() and 1 <= int(c_choice) <= len(candidates):
+                    chosen_song = candidates[int(c_choice)-1]
                     break
-                print("Invalid number. Try again.")
-        except (ValueError, EOFError):
-            print("\nNon-interactive environment detected or input error. Skipping resolution for this fuzzy match.")
-            continue # Skip to the next match if input fails
+                print("Invalid selection.")
+        else:
+            # Single match found, use it directly
+            chosen_song = {
+                "song_id": match.get("song_id"),
+                "title": match.get("title"),
+                "lyrics": match.get("lyrics")
+            }
 
-        chosen_song = match["candidates"][choice - 1]
-        print(f"✅ Selected: {chosen_song['title']}\n")
+        # --- SUB-STEP B: Resolve Display Name ---
+        print(f"\nChosen Song: {chosen_song['title']}")
+        print(f"How should the title appear in the slideshow?")
+        print(f"  [1] Use Library Title: '{chosen_song['title']}'")
+        print(f"  [O] Use Original Input: '{match['original']}'")
+        print(f"  [M] Enter Manually")
 
-        # Save this choice in cache
-        saved_choices[cache_key] = chosen_song["song_id"]
-        cache_updated = True
+        t_choice = input("Select title option (1/O/M): ").strip().upper()
 
-        resolved.append({
-            "line_number": match["line_number"], "original": match["original"],
-            "match_type": "manual selection", "song_id": chosen_song["song_id"],
-            "title": chosen_song["title"], "lyrics": chosen_song["lyrics"],
+        final_title = ""
+        if t_choice == 'O':
+            final_title = match["original"]
+        elif t_choice == 'M':
+            final_title = input("Enter custom title: ").strip()
+        else:
+            final_title = match["original"]
+
+        # Update the object and the persistent cache
+        match.update({
+            "title": final_title,
+            "song_id": chosen_song["song_id"],
+            "lyrics": chosen_song.get("lyrics", match.get("lyrics")),
+            "match_type": "manual resolution"
         })
+        
+        saved_choices[cache_key] = {
+            "song_id": chosen_song["song_id"],
+            "display_title": final_title
+        }
+        cache_updated = True
+        resolved.append(match)
 
-    # Persist any new data
     if cache_updated:
         save_saved_choices(saved_choices)
-        print(f"\n💾 Saved {len(saved_choices)} selections to {CACHE_FILE}")
-
+    
+    # Consolidate everything into fuzzy_matches for the next stage
     result["fuzzy_matches"] = resolved
+    result["exact_matches_hymn"] = []
+    result["exact_matches_title"] = []
+    
     return result
 
 def structure_matched_lyrics(result, repeat_choruses=True):
     """
-    Takes the categorized match results, combines them, sorts by line number,
-    cleans the lyrics, parses them into sections, and adds repeated choruses.
+    Final data processing before PowerPoint generation.
+    - Cleans chords/tags from lyrics.
+    - Breaks lyrics into 'stanza' and 'chorus' objects.
+    - If a song has one chorus, repeats it after every stanza.
     """
     combined = []
     for category in ("exact_matches_hymn", "exact_matches_title", "fuzzy_matches"):
@@ -285,7 +327,6 @@ def structure_matched_lyrics(result, repeat_choruses=True):
 
     output = []
     for item in combined_sorted:
-        # Skip items that were fuzzy matches but remain unresolved (missing the full 'lyrics' key)
         if "lyrics" not in item:
             print(f"🚫 Skipping line {item.get('line_number', '?')}: Unresolved match for '{item.get('original', 'Unknown')}'")
             continue
@@ -294,12 +335,12 @@ def structure_matched_lyrics(result, repeat_choruses=True):
         title = item["title"]
         lyrics_raw = item["lyrics"]
 
-        # 1. Process lyrics using external parser functions
+        # Parse raw string into structured list of sections
         lyrics_chosen = choose_lyrics_version(title, lyrics_raw)
         lyrics = clean_lyrics(lyrics_chosen)
         num_choruses, parsed_lyrics = parse_lyrics_sections(lyrics)
 
-        # 2. Handle repeated choruses
+        # Handle automatic chorus repetition logic
         lyrics_to_output = parsed_lyrics
         if repeat_choruses and num_choruses == 1:
             lyrics_with_repeated_chorus = []
@@ -309,14 +350,10 @@ def structure_matched_lyrics(result, repeat_choruses=True):
                 if section["type"] == "chorus":
                     chorus_section = section
                 elif section["type"] == "stanza" and chorus_section:
-                    # Insert chorus after every stanza
                     lyrics_with_repeated_chorus.append(chorus_section)
             lyrics_to_output = lyrics_with_repeated_chorus
 
         output.append((line_number, title, num_choruses, lyrics_to_output))
-
-        if num_choruses > 1:
-            print(f"⚠️  Song '{title}' has {num_choruses} choruses! (Compilation may be complex)")
 
     return output
 
@@ -325,14 +362,11 @@ def structure_matched_lyrics(result, repeat_choruses=True):
 # -------------------------
 
 def match_and_compile_songs(song_json_path, targets_txt_path, repeat_choruses=True):
-    """
-    Executes the full pipeline: match, resolve, structure, and report.
-    """
+    """Orchestrates the entire process from matching to final structuring."""
     print("--- 1. Matching Target Songs to Library ---")
     match_results = match_targets_to_library(song_json_path, targets_txt_path)
 
     print("\n--- 2. Interactive Fuzzy Match Resolution ---")
-    # Note: This step requires manual CLI input to fully resolve multi-candidate matches
     resolved_results = resolve_fuzzy_matches(match_results)
 
     print("\n--- 3. Structuring Matched Lyrics ---")
