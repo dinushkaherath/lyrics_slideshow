@@ -8,3 +8,4 @@ version_choices.json
 song_order.json
 target_songs.txt
 selected_songs.json
+config_settings.json
