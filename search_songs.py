@@ -212,7 +212,8 @@ def match_targets_to_library(song_json_path, targets_txt_path):
         "exact_matches_hymn": sort_by_line(exact_matches_hymn),
         "exact_matches_title": sort_by_line(exact_matches_title),
         "fuzzy_matches": sort_by_line(fuzzy_matches),
-        "failures": sorted(failures, key=lambda x: x["line_number"])
+        "failures": sorted(failures, key=lambda x: x["line_number"]),
+        "_all_songs": songs
     }
 
 def resolve_fuzzy_matches(result):
@@ -234,13 +235,23 @@ def resolve_fuzzy_matches(result):
         # Check Cache
         if cache_key in saved_choices:
             saved = saved_choices[cache_key]
-            match.update({
-                "title": saved["display_title"],
-                "song_id": saved["song_id"],
-                "match_type": "cached selection"
-            })
-            resolved.append(match)
-            continue
+            
+            # Re-fetch full song data using ID
+            song_id = saved["song_id"]
+            song_data = next(
+                (s for s in result["_all_songs"] if s["id"] == song_id),
+                None
+            )
+
+            if song_data:
+                match.update({
+                    "title": saved["display_title"],
+                    "song_id": song_id,
+                    "lyrics": song_data["lyrics"],
+                    "match_type": "cached selection"
+                })
+                resolved.append(match)
+                continue
 
         print(f"\n🔍 Target: '{match['original']}'")
         
