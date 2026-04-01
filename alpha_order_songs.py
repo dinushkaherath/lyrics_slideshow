@@ -82,6 +82,19 @@ def alpha_order(songs):
         # Map title to full tuple (handles full tuples with extra fields)
         title_to_song = {song[1]: song for song in songs}
         ordered = [title_to_song[t[1]] for t in saved_order if t[1] in title_to_song]
+
+        saved_titles = {t[1] for t in saved_order}
+        new_songs = sorted(
+            [song for song in songs if song[1] not in saved_titles],
+            key=lambda x: x[1].lower()
+        )
+        if new_songs:
+            print(f"  {len(new_songs)} new song(s) not in saved order — appending alphabetically:")
+            for s in new_songs:
+                print(f"    + {s[1]}")
+            ordered.extend(new_songs)
+            save_song_order(ordered)
+
         return ordered
 
     print("⚠️ No saved order found — launching interactive reorder.")

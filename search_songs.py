@@ -285,7 +285,7 @@ def resolve_fuzzy_matches(result):
         # --- SUB-STEP B: Resolve Display Name ---
         print(f"\nChosen Song: {chosen_song['title']}")
         print(f"How should the title appear in the slideshow?")
-        print(f"  [1] Use Library Title: '{chosen_song['title']}'")
+        print(f"  [1] Use Library Title:  '{chosen_song['title']}'")
         print(f"  [O] Use Original Input: '{match['original']}'")
         print(f"  [M] Enter Manually")
 
@@ -314,14 +314,89 @@ def resolve_fuzzy_matches(result):
         cache_updated = True
         resolved.append(match)
 
+    # --- Process Failures: Manual candidate selection for unmatched songs ---
+    for failure in result["failures"]:
+        cache_key = normalize(failure["original"])
+
+        if cache_key in saved_choices:
+            saved = saved_choices[cache_key]
+            song_id = saved["song_id"]
+            song_data = next(
+                (s for s in result["_all_songs"] if s["id"] == song_id), None
+            )
+            if song_data:
+                failure.update({
+                    "title": saved["display_title"],
+                    "song_id": song_id,
+                    "lyrics": song_data["lyrics"],
+                    "match_type": "cached selection"
+                })
+                resolved.append(failure)
+                continue
+
+        print(f"\nNo automatic match found for: '{failure['original']}'")
+
+        scored = []
+        for song in result["_all_songs"]:
+            score = similar(failure["original"], song.get("title", ""))
+            scored.append((score, song))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top_candidates = scored[:3]
+
+        print("Top 3 candidates from the library:")
+        for idx, (score, song) in enumerate(top_candidates, 1):
+            snippet = re.sub(r'\[.*?\]', '', song.get('lyrics', ''))[:80].replace('\n', ' ')
+            print(f"  [{idx}] {song['title']} (ID: {song['id']}, score: {score:.2f})")
+            print(f"      {snippet}...")
+            print()
+        print(f"  [0] Skip this song (do not include in slideshow)")
+
+        while True:
+            c_choice = input(f"Select song [1-3] or 0 to skip: ").strip()
+            if c_choice == '0':
+                print(f"Skipping '{failure['original']}'.")
+                break
+            if c_choice.isdigit() and 1 <= int(c_choice) <= 3:
+                _, chosen_song = top_candidates[int(c_choice) - 1]
+
+                print(f"\nChosen Song: {chosen_song['title']}")
+                print(f"How should the title appear in the slideshow?")
+                print(f"  [1] Use Library Title:  '{chosen_song['title']}'")
+                print(f"  [O] Use Original Input: '{failure['original']}'")
+                print(f"  [M] Enter Manually")
+
+                t_choice = input("Select title option (1/O/M): ").strip().upper()
+
+                if t_choice == 'O':
+                    final_title = failure["original"]
+                elif t_choice == 'M':
+                    final_title = input("Enter custom title: ").strip()
+                else:
+                    final_title = chosen_song["title"]
+
+                failure.update({
+                    "title": final_title,
+                    "song_id": chosen_song["id"],
+                    "lyrics": chosen_song.get("lyrics", ""),
+                    "match_type": "manual resolution from failure"
+                })
+                saved_choices[cache_key] = {
+                    "song_id": chosen_song["id"],
+                    "display_title": final_title
+                }
+                cache_updated = True
+                resolved.append(failure)
+                break
+            print("Invalid selection.")
+
     if cache_updated:
         save_saved_choices(saved_choices)
-    
+
     # Consolidate everything into fuzzy_matches for the next stage
     result["fuzzy_matches"] = resolved
     result["exact_matches_hymn"] = []
     result["exact_matches_title"] = []
-    
+
     return result
 
 def structure_matched_lyrics(result, repeat_choruses=True):
