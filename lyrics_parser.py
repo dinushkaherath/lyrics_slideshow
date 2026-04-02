@@ -229,13 +229,21 @@ def _expand_pattern(tokens: List[str], stanzas: List[Dict], choruses_by_num: Dic
     return result
 
 
-def _default_pattern(stanzas: List[Dict], choruses: List[Dict]) -> str:
+def _default_pattern(stanzas: List[Dict], choruses: List[Dict], chorus_first: bool = False) -> str:
     """Build a compact default pattern string from the song's sections."""
     if not choruses:
         return "S"
     if len(choruses) == 1:
-        return "S C1"
-    # Alternate stanzas with choruses in order, e.g. "S C1 S C2"
+        # If chorus appears before the first stanza, begin and end with chorus (C1 S repeats → C S C S C)
+        return "C1 S" if chorus_first else "S C1"
+    if len(choruses) == 2:
+        # Repeat C1 for all stanzas except the last, which gets C2
+        n = len(stanzas)
+        if n == 0:
+            return "C1 C2"
+        tokens = ["S", "C1"] * (n - 1) + ["S", "C2"]
+        return " ".join(tokens)
+    # 3+ choruses: alternate stanzas with each chorus in order
     tokens = []
     for i, _ in enumerate(choruses):
         tokens.append("S")
@@ -270,7 +278,8 @@ def arrange_sections(title: str, unique_sections: List[Dict], auto_ordered: List
     print("  Pattern repeats until all stanzas are used")
     print()
 
-    default = _default_pattern(stanzas, choruses)
+    chorus_first = bool(unique_sections) and unique_sections[0]["type"] == "chorus"
+    default = _default_pattern(stanzas, choruses, chorus_first=chorus_first)
     print(f"Default: {default}")
     print("Enter pattern (e.g. 'S C1 S C2' or 'S S C1') or ENTER for default:")
     raw = input("> ").strip()

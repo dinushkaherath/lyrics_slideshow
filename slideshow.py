@@ -132,7 +132,7 @@ class LyricsSlideshow:
         """Creates a slide listing all songs with clickable links."""
         slide = self.prs.slides.add_slide(self.blank_layout)
         slide.background.fill.solid()
-        slide.background.fill.fore_color.rgb = self.config["COLOR"]["header_bg"]
+        slide.background.fill.fore_color.rgb = self.config["COLOR"]["index_bg"]
 
         # Grid configuration
         grid = self.config["GRID"]
@@ -154,8 +154,8 @@ class LyricsSlideshow:
 
             shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, box_width, box_height)
             shape.fill.solid()
-            shape.fill.fore_color.rgb = self.config["COLOR"]["header_bg"]
-            shape.line.color.rgb = self.config["COLOR"]["text"]
+            shape.fill.fore_color.rgb = self.config["COLOR"]["index_box"]
+            shape.line.color.rgb = self.config["COLOR"]["index_text"]
             shape.line.width = Pt(0.75)
 
             text_frame = shape.text_frame
@@ -168,7 +168,7 @@ class LyricsSlideshow:
             run = p.runs[0]
             run.font.size = self.config["SIZE"]["song_list"]
             run.font.name = self.config["FONT"]["body"]
-            run.font.color.rgb = self.config["COLOR"]["text"]
+            run.font.color.rgb = self.config["COLOR"]["index_text"]
 
             try:
                 shape.click_action.target_slide = song_slide_map[index]
@@ -187,7 +187,7 @@ class LyricsSlideshow:
         """Creates an alphabetically ordered index slide."""
         slide = self.prs.slides.add_slide(self.blank_layout)
         slide.background.fill.solid()
-        slide.background.fill.fore_color.rgb = self.config["COLOR"]["header_bg"]
+        slide.background.fill.fore_color.rgb = self.config["COLOR"]["index_bg"]
 
         grid = self.config["GRID"]
         num_columns = grid["columns"]
@@ -205,21 +205,21 @@ class LyricsSlideshow:
 
             shape = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, box_width, box_height)
             shape.fill.solid()
-            shape.fill.fore_color.rgb = self.config["COLOR"]["header_bg"]
-            shape.line.color.rgb = self.config["COLOR"]["text"]
+            shape.fill.fore_color.rgb = self.config["COLOR"]["index_box"]
+            shape.line.color.rgb = self.config["COLOR"]["index_text"]
             shape.line.width = Pt(0.75)
 
             text_frame = shape.text_frame
             text_frame.text = full_title
             text_frame.vertical_anchor = MSO_VERTICAL_ANCHOR.MIDDLE
             text_frame.word_wrap = True
-            
+
             p = text_frame.paragraphs[0]
             p.alignment = PP_ALIGN.LEFT
             run = p.runs[0]
             run.font.size = self.config["SIZE"]["song_list"]
             run.font.name = self.config["FONT"]["body"]
-            run.font.color.rgb = self.config["COLOR"]["text"]
+            run.font.color.rgb = self.config["COLOR"]["index_text"]
 
             if song_number in number_index_map:
                 song_index = number_index_map[song_number]

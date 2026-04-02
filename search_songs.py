@@ -310,7 +310,7 @@ def resolve_fuzzy_matches(result):
         elif t_choice == 'M':
             final_title = input("Enter custom title: ").strip()
         else:
-            final_title = match["original"]
+            final_title = chosen_song["title"]
 
         # Update the object and the persistent cache
         match.update({

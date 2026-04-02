@@ -15,7 +15,8 @@ def configure_defaults() -> Dict[str, Any]:
     # --- 1. Define Default Dictionaries ---
     FONT = {"title": "Grathik", "body": "Grathik", "header": "Grathik"}
     SIZE = {"title": 44, "header": 24, "stanza": 44, "chorus": 44, "song_list": 14}
-    COLOR = {"bg": "1E6B2C", "header_bg": "F2C037", "text": "FFFFFF", "header_text": "2D1412"}
+    COLOR = {"bg": "1E6B2C", "header_bg": "F2C037", "text": "FFFFFF", "header_text": "2D1412",
+             "index_bg": "F2C037", "index_box": "F2C037", "index_text": "FFFFFF"}
     HEADER_BG = {"enabled": "y"}
 
     # --- 2. Load Saved Choices from Disk ---
