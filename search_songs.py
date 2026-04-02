@@ -3,7 +3,7 @@ import os
 import re
 import unicodedata
 from difflib import SequenceMatcher
-from lyrics_parser import choose_lyrics_version, clean_lyrics, parse_lyrics_sections
+from lyrics_parser import choose_lyrics_version, clean_lyrics, parse_lyrics_sections, relabel_sections, arrange_sections
 
 # -------------------------
 # Utility Functions
@@ -117,10 +117,23 @@ def match_targets_to_library(song_json_path, targets_txt_path):
     """
     with open(song_json_path, "r", encoding="utf-8") as f:
         full_data = json.load(f)
-        songs = full_data["songs"]
-        # Assumes the first book in the list provides the hymn number mapping
+
+    # Handle flat array (new Songbase format) or wrapped dict (old format)
+    if isinstance(full_data, list):
+        songs = full_data
+    else:
+        songs = full_data.get("songs", [])
+
+    # Load hymn map from standalone file; fall back to books structure if present
+    hymn_map = {}
+    hymn_map_path = os.path.join(os.path.dirname(os.path.abspath(song_json_path)), "hymn_map.json")
+    if os.path.exists(hymn_map_path):
+        with open(hymn_map_path, "r", encoding="utf-8") as hf:
+            hymn_map = json.load(hf)
+    elif isinstance(full_data, dict) and full_data.get("books"):
         hymn_map = build_hymn_number_map(full_data["books"][0]["songs"])
-        song_id_map = {song["id"]: song for song in songs}
+
+    song_id_map = {song["id"]: song for song in songs}
 
     parsed_targets = load_target_songs(targets_txt_path)
     matched_song_ids = set() # Prevent the same song from being picked twice in one run
@@ -349,10 +362,58 @@ def resolve_fuzzy_matches(result):
             print(f"  [{idx}] {song['title']} (ID: {song['id']}, score: {score:.2f})")
             print(f"      {snippet}...")
             print()
+        print(f"  [i] Manually input ID from Songbase")
         print(f"  [0] Skip this song (do not include in slideshow)")
 
         while True:
             c_choice = input(f"Select song [1-3] or 0 to skip: ").strip()
+            if c_choice == 'i':
+                manual_id = input("Enter Song ID: ").strip()
+
+                # Validate + find song
+                chosen_song = None
+                for song in result["_all_songs"]:
+                    if str(song["id"]) == manual_id:
+                        chosen_song = song
+                        break
+
+                if chosen_song is None:
+                    print("No song found with that ID.")
+                    continue  # go back to selection menu
+
+                # --- TITLE OPTIONS (same as your other flow) ---
+                print(f"\nChosen Song: {chosen_song['title']}")
+                print(f"How should the title appear in the slideshow?")
+                print(f"  [1] Use Library Title:  '{chosen_song['title']}'")
+                print(f"  [O] Use Original Input: '{failure['original']}'")
+                print(f"  [M] Enter Manually")
+
+                t_choice = input("Select title option (1/O/M): ").strip().upper()
+
+                if t_choice == 'O':
+                    final_title = failure["original"]
+                elif t_choice == 'M':
+                    final_title = input("Enter custom title: ").strip()
+                else:
+                    final_title = chosen_song["title"]
+
+                # --- SAVE RESULT ---
+                failure.update({
+                    "title": final_title,
+                    "song_id": chosen_song["id"],
+                    "lyrics": chosen_song.get("lyrics", ""),
+                    "match_type": "manual ID entry"
+                })
+
+                # Save to cache (important for future runs)
+                saved_choices[cache_key] = {
+                    "song_id": chosen_song["id"],
+                    "display_title": final_title
+                }
+
+                cache_updated = True
+                resolved.append(failure)
+                break
             if c_choice == '0':
                 print(f"Skipping '{failure['original']}'.")
                 break
@@ -426,18 +487,24 @@ def structure_matched_lyrics(result, repeat_choruses=True):
         lyrics = clean_lyrics(lyrics_chosen)
         num_choruses, parsed_lyrics = parse_lyrics_sections(lyrics)
 
-        # Handle automatic chorus repetition logic
-        lyrics_to_output = parsed_lyrics
+        # Let user correct any mislabeled sections before arranging
+        parsed_lyrics = relabel_sections(title, parsed_lyrics)
+        num_choruses = max((s["number"] for s in parsed_lyrics if s["type"] == "chorus"), default=0)
+
+        # Build auto-ordered sequence (repeat single chorus after each stanza)
+        auto_ordered = parsed_lyrics
         if repeat_choruses and num_choruses == 1:
-            lyrics_with_repeated_chorus = []
+            auto_ordered = []
             chorus_section = None
             for section in parsed_lyrics:
-                lyrics_with_repeated_chorus.append(section)
+                auto_ordered.append(section)
                 if section["type"] == "chorus":
                     chorus_section = section
                 elif section["type"] == "stanza" and chorus_section:
-                    lyrics_with_repeated_chorus.append(chorus_section)
-            lyrics_to_output = lyrics_with_repeated_chorus
+                    auto_ordered.append(chorus_section)
+
+        # Let user confirm or override the section order
+        lyrics_to_output = arrange_sections(title, parsed_lyrics, auto_ordered)
 
         output.append((line_number, title, num_choruses, lyrics_to_output))
 

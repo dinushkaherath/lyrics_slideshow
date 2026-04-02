@@ -9,3 +9,6 @@ song_order.json
 target_songs.txt
 selected_songs.json
 config_settings.json
+section_labels.json
+section_order.json
+.claude/settings.local.json

@@ -8,10 +8,24 @@ from typing import List, Dict
 _lyrics_version_cache = {}
 CACHE_FILE = "version_choices.json"
 
-# Load cache from disk if available
+_section_order_cache = {}
+SECTION_ORDER_FILE = "section_order.json"
+
+_section_labels_cache = {}
+SECTION_LABELS_FILE = "section_labels.json"
+
+# Load caches from disk if available
 if os.path.exists(CACHE_FILE):
     with open(CACHE_FILE, "r", encoding="utf-8") as f:
         _lyrics_version_cache = json.load(f)
+
+if os.path.exists(SECTION_ORDER_FILE):
+    with open(SECTION_ORDER_FILE, "r", encoding="utf-8") as f:
+        _section_order_cache = json.load(f)
+
+if os.path.exists(SECTION_LABELS_FILE):
+    with open(SECTION_LABELS_FILE, "r", encoding="utf-8") as f:
+        _section_labels_cache = json.load(f)
 
 def clean_lyrics(text):
     cleaned_lines = []
@@ -103,6 +117,183 @@ def parse_lyrics_sections(text: str) -> List[Dict]:
 
     flush_block()  # Final section flush at EOF
     return chorus_number, sections
+
+
+def _apply_labels(sections: List[Dict], labels: Dict[str, str]) -> List[Dict]:
+    """
+    Apply a {str_index: label} map to sections, then renumber stanzas sequentially.
+    Labels are like "S", "C1", "C2".
+    """
+    relabeled = []
+    for i, s in enumerate(sections, 1):
+        label = labels.get(str(i))
+        if label:
+            if label == "S":
+                relabeled.append({**s, "type": "stanza"})
+            elif label.startswith("C"):
+                num = 1
+                if len(label) > 1:
+                    try:
+                        num = int(label[1:])
+                    except ValueError:
+                        pass
+                relabeled.append({**s, "type": "chorus", "number": num})
+            else:
+                relabeled.append(s)
+        else:
+            relabeled.append(s)
+
+    # Renumber stanzas sequentially
+    stanza_count = 0
+    final = []
+    for s in relabeled:
+        if s["type"] == "stanza":
+            stanza_count += 1
+            final.append({**s, "number": stanza_count})
+        else:
+            final.append(s)
+    return final
+
+
+def relabel_sections(title: str, sections: List[Dict]) -> List[Dict]:
+    """
+    Show parsed sections and let the user reassign labels (S, C1, C2, etc.)
+    when auto-detection was wrong. Caches choices to section_labels.json.
+    """
+    if title in _section_labels_cache:
+        return _apply_labels(sections, _section_labels_cache[title])
+
+    print(f"\n🎵 {title} — Section Labels")
+    for i, s in enumerate(sections, 1):
+        label = "C" + str(s["number"]) if s["type"] == "chorus" else "S" + str(s["number"])
+        first_line = s["content"].splitlines()[0][:60] if s["content"] else ""
+        print(f"  [{i}] {label:4}  {first_line}")
+
+    print("\nRelabel? Enter e.g. '2=C1 4=C2 5=S' or ENTER to keep as-is:")
+    raw = input("> ").strip()
+
+    if not raw:
+        labels = {}
+    else:
+        labels = {}
+        for part in raw.split():
+            if "=" not in part:
+                continue
+            idx_str, lbl = part.split("=", 1)
+            try:
+                idx = int(idx_str)
+                if 1 <= idx <= len(sections):
+                    labels[str(idx)] = lbl.upper()
+            except ValueError:
+                pass
+
+    _section_labels_cache[title] = labels
+    with open(SECTION_LABELS_FILE, "w", encoding="utf-8") as f:
+        json.dump(_section_labels_cache, f, indent=2, ensure_ascii=False)
+
+    return _apply_labels(sections, labels)
+
+
+def _expand_pattern(tokens: List[str], stanzas: List[Dict], choruses_by_num: Dict) -> List[Dict]:
+    """
+    Expand a token pattern into a full section list.
+    S = next stanza (sequential), C/C1/C2 = specific chorus.
+    The pattern repeats until all stanzas are consumed.
+    """
+    result = []
+    stanza_idx = 0
+    has_s = any(t.upper() == "S" for t in tokens)
+
+    while True:
+        for token in tokens:
+            upper = token.upper()
+            if upper == "S":
+                if stanza_idx >= len(stanzas):
+                    return result
+                result.append(stanzas[stanza_idx])
+                stanza_idx += 1
+            else:
+                num = 1
+                if upper.startswith("C") and len(upper) > 1:
+                    try:
+                        num = int(upper[1:])
+                    except ValueError:
+                        pass
+                chorus = choruses_by_num.get(num)
+                if chorus:
+                    result.append(chorus)
+
+        if not has_s:
+            break  # No S tokens → pattern runs exactly once
+
+    return result
+
+
+def _default_pattern(stanzas: List[Dict], choruses: List[Dict]) -> str:
+    """Build a compact default pattern string from the song's sections."""
+    if not choruses:
+        return "S"
+    if len(choruses) == 1:
+        return "S C1"
+    # Alternate stanzas with choruses in order, e.g. "S C1 S C2"
+    tokens = []
+    for i, _ in enumerate(choruses):
+        tokens.append("S")
+        tokens.append(f"C{i + 1}")
+    return " ".join(tokens)
+
+
+def arrange_sections(title: str, unique_sections: List[Dict], auto_ordered: List[Dict]) -> List[Dict]:
+    """
+    Let the user define section order using S/C tokens. Pattern repeats until stanzas run out.
+    Caches the pattern string to section_order.json.
+    """
+    stanzas = [s for s in unique_sections if s["type"] == "stanza"]
+    choruses = [s for s in unique_sections if s["type"] == "chorus"]
+    choruses_by_num = {c["number"]: c for c in choruses}
+
+    if title in _section_order_cache:
+        pattern = _section_order_cache[title]
+        tokens = pattern.split()
+        result = _expand_pattern(tokens, stanzas, choruses_by_num)
+        if result:
+            return result
+
+    print(f"\n🎵 {title} — Section Order")
+    stanza_labels = "  ".join(f"S{s['number']}" for s in stanzas) or "none"
+    chorus_labels = "  ".join(f"C{c['number']}: {c['content'].splitlines()[0][:40]}" for c in choruses) or "none"
+    print(f"  Stanzas : {stanza_labels}")
+    print(f"  Choruses: {chorus_labels}")
+    print()
+    print("  S  = next stanza (repeats through all stanzas)")
+    print("  C1, C2, ... = specific chorus")
+    print("  Pattern repeats until all stanzas are used")
+    print()
+
+    default = _default_pattern(stanzas, choruses)
+    print(f"Default: {default}")
+    print("Enter pattern (e.g. 'S C1 S C2' or 'S S C1') or ENTER for default:")
+    raw = input("> ").strip()
+
+    if not raw:
+        pattern = default
+    else:
+        tokens = raw.upper().split()
+        test = _expand_pattern(tokens, stanzas, choruses_by_num)
+        if test:
+            pattern = raw.upper()
+        else:
+            print("Pattern produced no output, using default.")
+            pattern = default
+
+    tokens = pattern.split()
+    result = _expand_pattern(tokens, stanzas, choruses_by_num)
+
+    _section_order_cache[title] = pattern
+    with open(SECTION_ORDER_FILE, "w", encoding="utf-8") as f:
+        json.dump(_section_order_cache, f, indent=2, ensure_ascii=False)
+
+    return result
 
 def choose_lyrics_version(song_title, lyrics, persist=True):
     """

@@ -292,13 +292,17 @@ class LyricsSlideshow:
                     # Add home icon (target TBD)
                     self._add_icon(slide, target_slide=None, icon_path="assets/home.png", icon_type="home")
 
-                    # Add lyrics box
+                    # Add lyrics box with dynamic height to keep text in the top portion
                     is_chorus = (section["type"] == "chorus")
+                    font_size = self.config["SIZE"]["stanza"] if not is_chorus else self.config["SIZE"]["chorus"]
+                    line_height_in = (font_size.pt / 72.0) * 1.35
+                    content_height = Inches(len(chunk) * line_height_in + 0.25)
+                    lyrics_height = min(content_height, self.config["POSITION"]["lyrics_height"])
                     self._add_text_box(
                         slide=slide, text="\n".join(chunk),
                         left=self.config["POSITION"]["left_margin"], top=self.config["POSITION"]["lyrics_top"],
-                        width=self.config["POSITION"]["lyrics_width"], height=self.config["POSITION"]["lyrics_height"],
-                        font_size=self.config["SIZE"]["stanza"] if not is_chorus else self.config["SIZE"]["chorus"],
+                        width=self.config["POSITION"]["lyrics_width"], height=lyrics_height,
+                        font_size=font_size,
                         vertical_alignment=MSO_VERTICAL_ANCHOR.TOP,
                         is_chorus=is_chorus
                     )
